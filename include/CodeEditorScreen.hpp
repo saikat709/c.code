@@ -33,6 +33,12 @@ class CodeEditorScreen {
     sf::RectangleShape cursor;
     sf::Clock cursorBlink;
     
+    // Text selection
+    size_t selectionStart = 0;
+    size_t selectionEnd = 0;
+    bool isSelecting = false;
+    int preferredColumn = 0;  // For up/down navigation
+    
     // Scrolling
     int codeScrollOffset = 0;
     int outputScrollOffset = 0;
@@ -42,6 +48,16 @@ class CodeEditorScreen {
     void updateCodeDisplay();
     void updateOutputDisplay();
     std::vector<std::string> splitLines(const std::string& text);
+    
+    // Cursor and selection helpers
+    size_t getCursorPosFromClick(sf::Vector2f mousePos);
+    void moveCursorUp();
+    void moveCursorDown();
+    void deleteSelection();
+    std::string getSelectedText();
+    bool hasSelection();
+    void clearSelection();
+    void drawSelection(sf::RenderWindow& window);
 
 public:
     CodeEditorScreen(sf::Font& font, ParticleSystem& particles, sf::Vector2u windowSize);

@@ -70,18 +70,9 @@ std::vector<std::string> CodeEditorScreen::splitLines(const std::string& text) {
 void CodeEditorScreen::updateCodeDisplay() {
     codeText.setString(code);
     
-    // Update cursor position
-    std::string beforeCursor = code.substr(0, cursorPos);
-    auto lines = splitLines(beforeCursor);
-    int lineNum = lines.size() - 1;
-    std::string currentLine = lines.empty() ? "" : lines.back();
-    
-    sf::Text tempText(font, currentLine, 14);
-    
-    float cursorX = 30 + tempText.getLocalBounds().size.x;
-    float cursorY = 60 + lineNum * 18;
-    
-    cursor.setPosition({cursorX, cursorY});
+    // Update cursor position using SFML's text metrics
+    sf::Vector2f pos = codeText.findCharacterPos(cursorPos);
+    cursor.setPosition(pos);
 }
 
 void CodeEditorScreen::updateOutputDisplay() {
@@ -168,6 +159,180 @@ void CodeEditorScreen::executeCode() {
     #endif
 }
 
+bool CodeEditorScreen::hasSelection() {
+    return selectionStart != selectionEnd;
+}
+
+void CodeEditorScreen::clearSelection() {
+    selectionStart = selectionEnd = cursorPos;
+}
+
+std::string CodeEditorScreen::getSelectedText() {
+    if (!hasSelection()) return "";
+    size_t start = std::min(selectionStart, selectionEnd);
+    size_t end = std::max(selectionStart, selectionEnd);
+    return code.substr(start, end - start);
+}
+
+void CodeEditorScreen::deleteSelection() {
+    if (!hasSelection()) return;
+    size_t start = std::min(selectionStart, selectionEnd);
+    size_t end = std::max(selectionStart, selectionEnd);
+    code.erase(start, end - start);
+    cursorPos = start;
+    clearSelection();
+}
+
+size_t CodeEditorScreen::getCursorPosFromClick(sf::Vector2f mousePos) {
+    // Check if click is within editor bounds (roughly)
+    if (mousePos.x < 20 || mousePos.x > 620 || mousePos.y < 50 || mousePos.y > 330) {
+        return cursorPos; 
+    }
+    
+    float lineHeight = font.getLineSpacing(14);
+    float relativeY = mousePos.y - codeText.getPosition().y;
+    int lineIndex = static_cast<int>(relativeY / lineHeight);
+    
+    auto lines = splitLines(code);
+    if (lineIndex < 0) lineIndex = 0;
+    if (lineIndex >= static_cast<int>(lines.size())) lineIndex = lines.size() - 1;
+    
+    // Find start index of this line
+    size_t currentPos = 0;
+    for (int i = 0; i < lineIndex; ++i) {
+        currentPos += lines[i].length() + 1; // +1 for newline
+    }
+    
+    // Now iterate characters in this line to find closest X
+    std::string& line = lines[lineIndex];
+    float bestDist = 100000.0f;
+    size_t bestOffset = 0;
+    
+    // Check all character positions including the one after the last char
+    for (size_t i = 0; i <= line.length(); ++i) {
+        sf::Vector2f charPos = codeText.findCharacterPos(currentPos + i);
+        float dist = std::abs(mousePos.x - charPos.x);
+        if (dist < bestDist) {
+            bestDist = dist;
+            bestOffset = i;
+        }
+    }
+    
+    return currentPos + bestOffset;
+}
+
+void CodeEditorScreen::moveCursorUp() {
+    auto lines = splitLines(code);
+    if (lines.empty()) return;
+    
+    // Find current line and position within line
+    size_t pos = 0;
+    int currentLine = 0;
+    int columnPos = 0;
+    
+    for (size_t i = 0; i < lines.size(); i++) {
+        if (pos + lines[i].length() >= cursorPos) {
+            currentLine = i;
+            columnPos = cursorPos - pos;
+            break;
+        }
+        pos += lines[i].length() + 1; // +1 for newline
+    }
+    
+    // Move to previous line
+    if (currentLine > 0) {
+        size_t newLineStart = 0;
+        for (int i = 0; i < currentLine - 1; i++) {
+            newLineStart += lines[i].length() + 1;
+        }
+        
+        // Use preferred column or current column
+        int targetColumn = (preferredColumn > 0) ? preferredColumn : columnPos;
+        size_t newLineLength = lines[currentLine - 1].length();
+        
+        cursorPos = newLineStart + std::min(static_cast<size_t>(targetColumn), newLineLength);
+        preferredColumn = targetColumn;
+    }
+}
+
+void CodeEditorScreen::moveCursorDown() {
+    auto lines = splitLines(code);
+    if (lines.empty()) return;
+    
+    // Find current line and position within line
+    size_t pos = 0;
+    int currentLine = 0;
+    int columnPos = 0;
+    
+    for (size_t i = 0; i < lines.size(); i++) {
+        if (pos + lines[i].length() >= cursorPos) {
+            currentLine = i;
+            columnPos = cursorPos - pos;
+            break;
+        }
+        pos += lines[i].length() + 1; // +1 for newline
+    }
+    
+    // Move to next line
+    if (currentLine < static_cast<int>(lines.size()) - 1) {
+        size_t newLineStart = 0;
+        for (int i = 0; i <= currentLine; i++) {
+            newLineStart += lines[i].length() + 1;
+        }
+        
+        // Use preferred column or current column
+        int targetColumn = (preferredColumn > 0) ? preferredColumn : columnPos;
+        size_t newLineLength = lines[currentLine + 1].length();
+        
+        cursorPos = newLineStart + std::min(static_cast<size_t>(targetColumn), newLineLength);
+        preferredColumn = targetColumn;
+    }
+}
+
+void CodeEditorScreen::drawSelection(sf::RenderWindow& window) {
+    if (!hasSelection()) return;
+    
+    size_t start = std::min(selectionStart, selectionEnd);
+    size_t end = std::max(selectionStart, selectionEnd);
+    
+    auto lines = splitLines(code);
+    float lineHeight = font.getLineSpacing(14);
+    size_t currentPos = 0;
+    
+    for (size_t i = 0; i < lines.size(); i++) {
+        size_t lineLen = lines[i].length();
+        size_t lineEndPos = currentPos + lineLen;
+        
+        // Check intersection with selection
+        size_t selStartInLine = std::max(start, currentPos);
+        size_t selEndInLine = std::min(end, lineEndPos);
+        
+        if (selStartInLine < selEndInLine) {
+            // This line has selected text
+            sf::Vector2f startPos = codeText.findCharacterPos(selStartInLine);
+            sf::Vector2f endPos = codeText.findCharacterPos(selEndInLine);
+            
+            float width = endPos.x - startPos.x;
+            
+            sf::RectangleShape selRect({width, lineHeight});
+            selRect.setPosition(startPos);
+            selRect.setFillColor(sf::Color(100, 150, 255, 100));
+            window.draw(selRect);
+        }
+        
+        // Handle newline selection
+        if (end > lineEndPos && start <= lineEndPos) {
+            sf::Vector2f startPos = codeText.findCharacterPos(lineEndPos);
+            sf::RectangleShape selRect({5.0f, lineHeight}); // 5px width indicator for newline
+            selRect.setPosition(startPos);
+            selRect.setFillColor(sf::Color(100, 150, 255, 100));
+            window.draw(selRect);
+        }
+        
+        currentPos += lineLen + 1; // +1 for newline
+    }
+}
+
 AppState CodeEditorScreen::run(sf::RenderWindow& window) {
     while (window.isOpen()) {
         while (const auto event = window.pollEvent()) {
@@ -183,6 +348,7 @@ AppState CodeEditorScreen::run(sf::RenderWindow& window) {
                 code.clear();
                 cursorPos = 0;
                 output.clear();
+                clearSelection();
                 updateCodeDisplay();
                 updateOutputDisplay();
             }
@@ -191,24 +357,72 @@ AppState CodeEditorScreen::run(sf::RenderWindow& window) {
                 return AppState::LOGIN;
             }
             
+            // Handle mouse clicks for cursor positioning
+            if (const auto* mouseEvent = event->getIf<sf::Event::MouseButtonPressed>()) {
+                if (mouseEvent->button == sf::Mouse::Button::Left) {
+                    sf::Vector2f mousePos = window.mapPixelToCoords({mouseEvent->position.x, mouseEvent->position.y});
+                    size_t newPos = getCursorPosFromClick(mousePos);
+                    
+                    if (newPos != cursorPos) {
+                        cursorPos = newPos;
+                        clearSelection();
+                        isSelecting = true;
+                        updateCodeDisplay();
+                    }
+                }
+            }
+            
+            // Handle mouse drag for selection
+            if (const auto* mouseMoveEvent = event->getIf<sf::Event::MouseMoved>()) {
+                if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && isSelecting) {
+                    sf::Vector2f mousePos = window.mapPixelToCoords({mouseMoveEvent->position.x, mouseMoveEvent->position.y});
+                    size_t newPos = getCursorPosFromClick(mousePos);
+                    
+                    if (newPos != cursorPos) {
+                        selectionEnd = newPos;
+                        cursorPos = newPos;
+                        updateCodeDisplay();
+                    }
+                }
+            }
+            
+            // Handle mouse release
+            if (const auto* mouseReleaseEvent = event->getIf<sf::Event::MouseButtonReleased>()) {
+                if (mouseReleaseEvent->button == sf::Mouse::Button::Left) {
+                    isSelecting = false;
+                }
+            }
+            
             // Handle text input
             if (const auto* textEvent = event->getIf<sf::Event::TextEntered>()) {
                 if (textEvent->unicode < 128) {
                     char c = static_cast<char>(textEvent->unicode);
                     
                     if (c == '\b') { // Backspace
-                        if (cursorPos > 0) {
+                        if (hasSelection()) {
+                            deleteSelection();
+                            updateCodeDisplay();
+                        } else if (cursorPos > 0) {
                             code.erase(cursorPos - 1, 1);
                             cursorPos--;
                             updateCodeDisplay();
                         }
                     } else if (c == '\r' || c == '\n') { // Enter
+                        if (hasSelection()) {
+                            deleteSelection();
+                        }
                         code.insert(cursorPos, "\n");
                         cursorPos++;
+                        clearSelection();
+                        preferredColumn = 0;
                         updateCodeDisplay();
                     } else if (c >= 32) { // Printable characters
+                        if (hasSelection()) {
+                            deleteSelection();
+                        }
                         code.insert(cursorPos, 1, c);
                         cursorPos++;
+                        clearSelection();
                         updateCodeDisplay();
                     }
                 }
@@ -216,28 +430,141 @@ AppState CodeEditorScreen::run(sf::RenderWindow& window) {
             
             // Handle special keys
             if (const auto* keyEvent = event->getIf<sf::Event::KeyPressed>()) {
+                bool shiftPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift) || 
+                                   sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RShift);
+                bool ctrlPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || 
+                                  sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl);
+                
+                // Clipboard operations
+                if (ctrlPressed) {
+                    if (keyEvent->code == sf::Keyboard::Key::C) {
+                        // Copy
+                        if (hasSelection()) {
+                            sf::Clipboard::setString(getSelectedText());
+                        }
+                    } else if (keyEvent->code == sf::Keyboard::Key::V) {
+                        // Paste
+                        if (hasSelection()) {
+                            deleteSelection();
+                        }
+                        std::string clipboardText = sf::Clipboard::getString();
+                        code.insert(cursorPos, clipboardText);
+                        cursorPos += clipboardText.length();
+                        clearSelection();
+                        updateCodeDisplay();
+                    } else if (keyEvent->code == sf::Keyboard::Key::X) {
+                        // Cut
+                        if (hasSelection()) {
+                            sf::Clipboard::setString(getSelectedText());
+                            deleteSelection();
+                            updateCodeDisplay();
+                        }
+                    } else if (keyEvent->code == sf::Keyboard::Key::A) {
+                        // Select all
+                        selectionStart = 0;
+                        selectionEnd = code.length();
+                        cursorPos = code.length();
+                        updateCodeDisplay();
+                    }
+                }
+                
+                // Arrow key navigation
                 if (keyEvent->code == sf::Keyboard::Key::Left && cursorPos > 0) {
-                    cursorPos--;
+                    if (shiftPressed) {
+                        if (!hasSelection()) {
+                            selectionStart = cursorPos;
+                        }
+                        cursorPos--;
+                        selectionEnd = cursorPos;
+                    } else {
+                        cursorPos--;
+                        clearSelection();
+                    }
+                    preferredColumn = 0;
                     updateCodeDisplay();
                 } else if (keyEvent->code == sf::Keyboard::Key::Right && cursorPos < code.length()) {
-                    cursorPos++;
+                    if (shiftPressed) {
+                        if (!hasSelection()) {
+                            selectionStart = cursorPos;
+                        }
+                        cursorPos++;
+                        selectionEnd = cursorPos;
+                    } else {
+                        cursorPos++;
+                        clearSelection();
+                    }
+                    preferredColumn = 0;
+                    updateCodeDisplay();
+                } else if (keyEvent->code == sf::Keyboard::Key::Up) {
+                    if (shiftPressed) {
+                        if (!hasSelection()) {
+                            selectionStart = cursorPos;
+                        }
+                        moveCursorUp();
+                        selectionEnd = cursorPos;
+                    } else {
+                        moveCursorUp();
+                        clearSelection();
+                    }
+                    updateCodeDisplay();
+                } else if (keyEvent->code == sf::Keyboard::Key::Down) {
+                    if (shiftPressed) {
+                        if (!hasSelection()) {
+                            selectionStart = cursorPos;
+                        }
+                        moveCursorDown();
+                        selectionEnd = cursorPos;
+                    } else {
+                        moveCursorDown();
+                        clearSelection();
+                    }
                     updateCodeDisplay();
                 } else if (keyEvent->code == sf::Keyboard::Key::Home) {
                     // Move to start of line
+                    if (shiftPressed && !hasSelection()) {
+                        selectionStart = cursorPos;
+                    }
                     while (cursorPos > 0 && code[cursorPos - 1] != '\n') {
                         cursorPos--;
                     }
+                    if (shiftPressed) {
+                        selectionEnd = cursorPos;
+                    } else {
+                        clearSelection();
+                    }
+                    preferredColumn = 0;
                     updateCodeDisplay();
                 } else if (keyEvent->code == sf::Keyboard::Key::End) {
                     // Move to end of line
+                    if (shiftPressed && !hasSelection()) {
+                        selectionStart = cursorPos;
+                    }
                     while (cursorPos < code.length() && code[cursorPos] != '\n') {
                         cursorPos++;
                     }
+                    if (shiftPressed) {
+                        selectionEnd = cursorPos;
+                    } else {
+                        clearSelection();
+                    }
+                    preferredColumn = 0;
                     updateCodeDisplay();
                 } else if (keyEvent->code == sf::Keyboard::Key::Tab) {
                     // Insert 4 spaces for tab
+                    if (hasSelection()) {
+                        deleteSelection();
+                    }
                     code.insert(cursorPos, "    ");
                     cursorPos += 4;
+                    clearSelection();
+                    updateCodeDisplay();
+                } else if (keyEvent->code == sf::Keyboard::Key::Delete) {
+                    // Delete key
+                    if (hasSelection()) {
+                        deleteSelection();
+                    } else if (cursorPos < code.length()) {
+                        code.erase(cursorPos, 1);
+                    }
                     updateCodeDisplay();
                 }
             }
@@ -267,6 +594,10 @@ AppState CodeEditorScreen::run(sf::RenderWindow& window) {
         window.draw(outputBox);
         window.draw(editorLabel);
         window.draw(outputLabel);
+        
+        // Draw selection before text
+        drawSelection(window);
+        
         window.draw(codeText);
         window.draw(outputText);
         
