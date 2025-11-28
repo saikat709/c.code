@@ -13,7 +13,7 @@ LIBS="-lsfml-graphics -lsfml-window -lsfml-system"
 OUTPUT="bin/LoginApp.exe"
 
 # Source files
-SOURCES="src/main.cpp src/login.cpp"
+SOURCES="src/main.cpp src/login.cpp src/ParticleSystem.cpp src/UI.cpp src/LoginScreen.cpp src/RegisterScreen.cpp"
 
 echo "Compiling..."
 $CXX $CXXFLAGS $INCLUDES $SOURCES -o $OUTPUT $LIBS

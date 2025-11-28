@@ -1,20 +1,28 @@
 # LoginApp
 
-A modern C++23 project with an **astonishing** SFML-based login screen.
+A modern C++23 project with an **astonishing** SFML-based login and registration system.
 
 ## Features
+- **Modular Architecture**: Separated concerns into distinct classes and files.
 - **Modern UI/UX**:
   - **Glassmorphism Design**: Semi-transparent cards and blur-like effects.
   - **Dynamic Background**: Animated particle system with floating nodes.
   - **Interactive Elements**: Hover effects, focus states, and smooth transitions.
   - **Typography**: Uses Segoe UI for a clean, modern look.
+- **Navigation**: Seamless switching between Login and Register screens.
 - **C++23 & SFML 3.0**: Built with the latest standards.
-- **Networking**: Ready for socket integration.
 
 ## Structure
-- `src/` - Source files (`main.cpp`, `login.cpp`)
-- `include/` - Header files (`login.hpp`)
-- `bin/` - Compiled executable
+- `src/`
+  - `main.cpp`: Entry point and state management.
+  - `LoginScreen.cpp`: Login UI and logic.
+  - `RegisterScreen.cpp`: Registration UI and logic.
+  - `ParticleSystem.cpp`: Background animation logic.
+  - `UI.cpp`: Reusable UI components (InputField, Button).
+  - `login.cpp`: Authentication logic.
+- `include/`
+  - Headers for all the above components.
+- `bin/`: Compiled executable.
 
 ## Build & Run
 ### Prerequisites
@@ -30,11 +38,11 @@ Simply execute the run script:
 
 Or compile manually:
 ```bash
-g++ -std=c++23 -Wall -Wextra -Iinclude src/main.cpp src/login.cpp -o bin/LoginApp.exe -lsfml-graphics -lsfml-window -lsfml-system
+g++ -std=c++23 -Wall -Wextra -Iinclude src/main.cpp src/login.cpp src/ParticleSystem.cpp src/UI.cpp src/LoginScreen.cpp src/RegisterScreen.cpp -o bin/LoginApp.exe -lsfml-graphics -lsfml-window -lsfml-system
 ./bin/LoginApp.exe
 ```
 
 ## Controls
-- **Tab**: Switch between Username and Password fields.
-- **Mouse**: Click to focus fields or click Login.
+- **Tab**: Switch between fields.
+- **Mouse**: Click to focus fields or buttons.
 - **Backspace**: Delete text.
