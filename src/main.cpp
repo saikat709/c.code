@@ -4,6 +4,7 @@
 #include "ParticleSystem.hpp"
 #include "LoginScreen.hpp"
 #include "RegisterScreen.hpp"
+#include "CodeEditorScreen.hpp"
 #include "AppState.hpp"
 
 int main() {
@@ -21,6 +22,7 @@ int main() {
     // Screens
     LoginScreen loginScreen(font, particles, {800, 600});
     RegisterScreen registerScreen(font, particles, {800, 600});
+    CodeEditorScreen codeEditorScreen(font, particles, {800, 600});
 
     AppState currentState = AppState::LOGIN;
 
@@ -56,6 +58,8 @@ int main() {
             currentState = loginScreen.run(window);
         } else if (currentState == AppState::REGISTER) {
             currentState = registerScreen.run(window);
+        } else if (currentState == AppState::CODE_EDITOR) {
+            currentState = codeEditorScreen.run(window);
         }
     }
 

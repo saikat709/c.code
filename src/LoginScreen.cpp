@@ -52,9 +52,7 @@ AppState LoginScreen::run(sf::RenderWindow& window) {
 
             if (loginBtn.isClicked(*event, window)) {
                 if (login::authenticate(userField.getString(), passField.getString())) {
-                    statusMsg.setString("Login Successful!");
-                    statusMsg.setFillColor(sf::Color::Green);
-                    // Could transition to a DASHBOARD state here
+                    return AppState::CODE_EDITOR;
                 } else {
                     statusMsg.setString("Invalid Username or Password");
                     statusMsg.setFillColor(sf::Color::Red);
