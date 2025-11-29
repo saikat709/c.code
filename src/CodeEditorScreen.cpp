@@ -7,6 +7,9 @@
 #include "UI.hpp"
 #include <SFML/Graphics.hpp>
 
+using namespace std;
+using namespace sf;
+
 
 CodeEditorScreen::CodeEditorScreen(Font& font, ParticleSystem& particles, Vector2u windowSize)
     : font(font), particles(particles),

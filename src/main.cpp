@@ -1,7 +1,7 @@
+#include <iostream>
+
 #include <SFML/Graphics.hpp>
 #include <SFML/Window.hpp>
-
-#include <iostream>
 
 #include "ParticleSystem.hpp"
 #include "LoginScreen.hpp"
@@ -10,8 +10,9 @@
 #include "ProjectSelectScreen.hpp"
 #include "AppState.hpp"
 
+
 int main() {
-    RenderWindow window(VideoMode({800, 600}), "Login System", Style::Titlebar | Style::Close);
+    RenderWindow window(VideoMode({800, 600}), "C.CODE", Style::Titlebar | Style::Close);
     window.setFramerateLimit(60);
 
     Font font;
@@ -19,7 +20,7 @@ int main() {
         if (!font.openFromFile("C:/Windows/Fonts/arial.ttf")) return 1;
     }
 
-    // Shared resources
+    // Shared
     ParticleSystem particles(50, {800, 600});
     
     // Screens
@@ -28,7 +29,7 @@ int main() {
     CodeEditorScreen codeEditorScreen(font, particles, {800, 600});
     ProjectSelectScreen projectSelectScreen(font, particles, {800, 600});
 
-    AppState currentState = AppState::LOGIN;
+    AppState currentState = AppState::PROJECT_SELECT;
 
     // Background gradient (shared)
     VertexArray gradient(PrimitiveType::TriangleStrip, 4);
@@ -45,7 +46,7 @@ int main() {
         } else if (currentState == AppState::CODE_EDITOR) {
             currentState = codeEditorScreen.run(window);
         } else if (currentState == AppState::PROJECT_SELECT){
-            currentState = projectSelectScreen(window);
+            currentState = projectSelectScreen.run(window);
         }
     }
 

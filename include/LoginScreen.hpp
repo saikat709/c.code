@@ -4,6 +4,9 @@
 #include "UI.hpp"
 #include "ParticleSystem.hpp"
 
+using namespace std;
+using namespace sf;
+
 class LoginScreen {
     Font& font;
     ParticleSystem& particles;

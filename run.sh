@@ -13,7 +13,7 @@ LIBS="-lsfml-graphics -lsfml-window -lsfml-system"
 OUTPUT="bin/C.Code.exe"
 
 # Source files
-SOURCES="src/main.cpp src/login.cpp src/ParticleSystem.cpp src/UI.cpp src/LoginScreen.cpp src/RegisterScreen.cpp src/CodeEditorScreen.cpp"
+SOURCES="src/*"
 
 echo "Compiling..."
 $CXX $CXXFLAGS $INCLUDES $SOURCES -o $OUTPUT $LIBS

@@ -3,6 +3,9 @@
 #include <vector>
 #include <random>
 
+using namespace std;
+using namespace sf;
+
 class ParticleSystem {
     struct Particle {
         Vector2f position;

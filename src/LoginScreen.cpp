@@ -1,6 +1,9 @@
 #include "LoginScreen.hpp"
 #include "login.hpp"
 
+using namespace std;
+using namespace sf;
+
 LoginScreen::LoginScreen(Font& font, ParticleSystem& particles, Vector2u windowSize)
     : font(font), particles(particles),
       userField(font, "Username", {275, 240}, {250, 40}),
@@ -45,7 +48,7 @@ AppState LoginScreen::run(RenderWindow& window) {
 
             if (loginBtn.isClicked(*event, window)) {
                 if (login::authenticate(userField.getString(), passField.getString())) {
-                    return AppState::CODE_EDITOR;
+                    return AppState::PROJECT_SELECT;
                 } else {
                     statusMsg.setString("Invalid Username or Password");
                     statusMsg.setFillColor(Color::Red);
