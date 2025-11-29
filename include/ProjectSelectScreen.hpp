@@ -4,7 +4,10 @@
 #include "UI.hpp"
 #include "ParticleSystem.hpp"
 
-class LoginScreen {
+using namespace std;
+using namespace sf;
+
+class ProjectSelectScreen {
     Font& font;
     ParticleSystem& particles;
     
@@ -12,11 +15,12 @@ class LoginScreen {
     Text title;
     InputField userField;
     InputField passField;
-    Button loginBtn;
-    Button registerBtn; // Button to switch to register screen
+    InputField confirmPassField;
+    Button registerBtn;
+    Button backBtn;
     Text statusMsg;
 
 public:
-    LoginScreen(Font& font, ParticleSystem& particles, Vector2u windowSize);
+    ProjectSelectScreen(Font& font, ParticleSystem& particles, Vector2u windowSize);
     AppState run(RenderWindow& window);
 };

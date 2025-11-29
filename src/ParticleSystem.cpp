@@ -1,13 +1,16 @@
 #include "ParticleSystem.hpp"
 #include <cstdint>
 
-ParticleSystem::ParticleSystem(unsigned int count, sf::Vector2u size) : windowSize(size) {
-    rng.seed(std::random_device()());
-    std::uniform_real_distribution<float> distX(0, (float)size.x);
-    std::uniform_real_distribution<float> distY(0, (float)size.y);
-    std::uniform_real_distribution<float> distVel(-0.5f, 0.5f);
-    std::uniform_real_distribution<float> distRad(2.0f, 5.0f);
-    std::uniform_real_distribution<float> distAlpha(50.0f, 150.0f);
+using namespace std;
+using namespace sf;
+
+ParticleSystem::ParticleSystem(unsigned int count, Vector2u size) : windowSize(size) {
+    rng.seed(random_device()());
+    uniform_real_distribution<float> distX(0, (float)size.x);
+    uniform_real_distribution<float> distY(0, (float)size.y);
+    uniform_real_distribution<float> distVel(-0.5f, 0.5f);
+    uniform_real_distribution<float> distRad(2.0f, 5.0f);
+    uniform_real_distribution<float> distAlpha(50.0f, 150.0f);
 
     for (unsigned int i = 0; i < count; ++i) {
         particles.push_back({
@@ -35,12 +38,12 @@ void ParticleSystem::update() {
     }
 }
 
-void ParticleSystem::draw(sf::RenderWindow& window) {
-    sf::CircleShape shape;
+void ParticleSystem::draw(RenderWindow& window) {
+    CircleShape shape;
     for (const auto& p : particles) {
         shape.setRadius(p.radius);
         shape.setPosition(p.position);
-        shape.setFillColor(sf::Color(255, 255, 255, static_cast<std::uint8_t>(p.alpha)));
+        shape.setFillColor(Color(255, 255, 255, static_cast<uint8_t>(p.alpha)));
         window.draw(shape);
     }
 }

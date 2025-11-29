@@ -7,13 +7,13 @@ mkdir -p bin
 CXX=g++
 CXXFLAGS="-std=c++23 -Wall -Wextra"
 INCLUDES="-Iinclude"
-LIBS="-lsfml-graphics -lsfml-window -lsfml-system"
+LIBS="-lsfml-graphics"
 
 # Output file
-OUTPUT="bin/C.Code.exe"
+OUTPUT="bin/Server.exe"
 
 # Source files
-SOURCES="src/main.cpp src/login.cpp src/ParticleSystem.cpp src/UI.cpp src/LoginScreen.cpp src/RegisterScreen.cpp src/CodeEditorScreen.cpp"
+SOURCES="server/* lib/*"
 
 echo "Compiling..."
 $CXX $CXXFLAGS $INCLUDES $SOURCES -o $OUTPUT $LIBS

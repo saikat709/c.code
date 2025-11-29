@@ -7,31 +7,34 @@
 #include "AppState.hpp"
 #include "UI.hpp"
 
+using namespace std;
+using namespace sf;
+
 
 class CodeEditorScreen {
-    sf::Font& font;
+    Font& font;
     ParticleSystem& particles;
     
     // UI Components
-    sf::RectangleShape editorBox;
-    sf::RectangleShape outputBox;
-    sf::Text editorLabel;
-    sf::Text outputLabel;
-    sf::Text codeText;
-    sf::Text outputText;
+    RectangleShape editorBox;
+    RectangleShape outputBox;
+    Text editorLabel;
+    Text outputLabel;
+    Text codeText;
+    Text outputText;
     
     Button runBtn;
     Button clearBtn;
     Button logoutBtn;
     
     // Code content
-    std::string code;
-    std::string output;
+    string code;
+    string output;
     
     // Cursor and editing
     size_t cursorPos = 0;
-    sf::RectangleShape cursor;
-    sf::Clock cursorBlink;
+    RectangleShape cursor;
+    Clock cursorBlink;
     
     // Text selection
     size_t selectionStart = 0;
@@ -47,19 +50,19 @@ class CodeEditorScreen {
     void executeCode();
     void updateCodeDisplay();
     void updateOutputDisplay();
-    std::vector<std::string> splitLines(const std::string& text);
+    vector<string> splitLines(const string& text);
     
     // Cursor and selection helpers
-    size_t getCursorPosFromClick(sf::Vector2f mousePos);
+    size_t getCursorPosFromClick(Vector2f mousePos);
     void moveCursorUp();
     void moveCursorDown();
     void deleteSelection();
-    std::string getSelectedText();
+    string getSelectedText();
     bool hasSelection();
     void clearSelection();
-    void drawSelection(sf::RenderWindow& window);
+    void drawSelection(RenderWindow& window);
 
 public:
-    CodeEditorScreen(sf::Font& font, ParticleSystem& particles, sf::Vector2u windowSize);
-    AppState run(sf::RenderWindow& window);
+    CodeEditorScreen(Font& font, ParticleSystem& particles, Vector2u windowSize);
+    AppState run(RenderWindow& window);
 };

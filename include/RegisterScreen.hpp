@@ -4,20 +4,23 @@
 #include "UI.hpp"
 #include "ParticleSystem.hpp"
 
+using namespace std;
+using namespace sf;
+
 class RegisterScreen {
-    sf::Font& font;
+    Font& font;
     ParticleSystem& particles;
     
-    sf::RectangleShape card;
-    sf::Text title;
+    RectangleShape card;
+    Text title;
     InputField userField;
     InputField passField;
     InputField confirmPassField;
     Button registerBtn;
     Button backBtn;
-    sf::Text statusMsg;
+    Text statusMsg;
 
 public:
-    RegisterScreen(sf::Font& font, ParticleSystem& particles, sf::Vector2u windowSize);
-    AppState run(sf::RenderWindow& window);
+    RegisterScreen(Font& font, ParticleSystem& particles, Vector2u windowSize);
+    AppState run(RenderWindow& window);
 };

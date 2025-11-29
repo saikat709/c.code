@@ -8,7 +8,7 @@
 #include <SFML/Graphics.hpp>
 
 
-CodeEditorScreen::CodeEditorScreen(sf::Font& font, ParticleSystem& particles, sf::Vector2u windowSize)
+CodeEditorScreen::CodeEditorScreen(Font& font, ParticleSystem& particles, Vector2u windowSize)
     : font(font), particles(particles),
       runBtn(font, "RUN", {650, 20}, {120, 40}),
       clearBtn(font, "CLEAR", {650, 70}, {120, 40}),
@@ -21,35 +21,35 @@ CodeEditorScreen::CodeEditorScreen(sf::Font& font, ParticleSystem& particles, sf
     // Editor Box (left side, top half)
     editorBox.setSize({600, 280});
     editorBox.setPosition({20, 50});
-    editorBox.setFillColor(sf::Color(30, 41, 59, 220));
+    editorBox.setFillColor(Color(30, 41, 59, 220));
     editorBox.setOutlineThickness(2);
-    editorBox.setOutlineColor(sf::Color(100, 150, 200));
+    editorBox.setOutlineColor(Color(100, 150, 200));
     
     // Output Box (left side, bottom half)
     outputBox.setSize({600, 230});
     outputBox.setPosition({20, 350});
-    outputBox.setFillColor(sf::Color(20, 30, 45, 220));
+    outputBox.setFillColor(Color(20, 30, 45, 220));
     outputBox.setOutlineThickness(2);
-    outputBox.setOutlineColor(sf::Color(150, 100, 100));
+    outputBox.setOutlineColor(Color(150, 100, 100));
     
     // Labels
-    editorLabel.setFillColor(sf::Color::White);
+    editorLabel.setFillColor(Color::White);
     editorLabel.setPosition({25, 25});
     
-    outputLabel.setFillColor(sf::Color::White);
+    outputLabel.setFillColor(Color::White);
     outputLabel.setPosition({25, 325});
     
     // Code Text
-    codeText.setFillColor(sf::Color(220, 220, 220));
+    codeText.setFillColor(Color(220, 220, 220));
     codeText.setPosition({30, 60});
     
     // Output Text
-    outputText.setFillColor(sf::Color(200, 255, 200));
+    outputText.setFillColor(Color(200, 255, 200));
     outputText.setPosition({30, 360});
     
     // Cursor
     cursor.setSize({2, 16});
-    cursor.setFillColor(sf::Color::White);
+    cursor.setFillColor(Color::White);
     
     // Default code template
     code = "#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << \"Hello, World!\" << endl;\n    return 0;\n}\n";
@@ -57,11 +57,11 @@ CodeEditorScreen::CodeEditorScreen(sf::Font& font, ParticleSystem& particles, sf
     updateCodeDisplay();
 }
 
-std::vector<std::string> CodeEditorScreen::splitLines(const std::string& text) {
-    std::vector<std::string> lines;
-    std::stringstream ss(text);
-    std::string line;
-    while (std::getline(ss, line)) {
+vector<string> CodeEditorScreen::splitLines(const string& text) {
+    vector<string> lines;
+    stringstream ss(text);
+    string line;
+    while (getline(ss, line)) {
         lines.push_back(line);
     }
     return lines;
@@ -71,7 +71,7 @@ void CodeEditorScreen::updateCodeDisplay() {
     codeText.setString(code);
     
     // Update cursor position using SFML's text metrics
-    sf::Vector2f pos = codeText.findCharacterPos(cursorPos);
+    Vector2f pos = codeText.findCharacterPos(cursorPos);
     cursor.setPosition(pos);
 }
 
@@ -84,7 +84,7 @@ void CodeEditorScreen::executeCode() {
     updateOutputDisplay();
     
     // Write code to temporary file
-    std::ofstream tempFile("temp_code.cpp");
+    ofstream tempFile("temp_code.cpp");
     if (!tempFile) {
         output = "Error: Could not create temporary file\n";
         updateOutputDisplay();
@@ -94,15 +94,15 @@ void CodeEditorScreen::executeCode() {
     tempFile.close();
     
     // Compile the code
-    std::string compileCmd = "g++ -std=c++17 temp_code.cpp -o temp_program 2>&1";
+    string compileCmd = "g++ -std=c++17 temp_code.cpp -o temp_program 2>&1";
     
-    std::array<char, 128> buffer;
-    std::string compileOutput;
+    array<char, 128> buffer;
+    string compileOutput;
     
     #ifdef _WIN32
-    std::unique_ptr<FILE, decltype(&_pclose)> pipe(_popen(compileCmd.c_str(), "r"), _pclose);
+    unique_ptr<FILE, decltype(&_pclose)> pipe(_popen(compileCmd.c_str(), "r"), _pclose);
     #else
-    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(compileCmd.c_str(), "r"), pclose);
+    unique_ptr<FILE, decltype(&pclose)> pipe(popen(compileCmd.c_str(), "r"), pclose);
     #endif
     
     if (!pipe) {
@@ -126,11 +126,11 @@ void CodeEditorScreen::executeCode() {
     updateOutputDisplay();
     
     #ifdef _WIN32
-    std::string runCmd = "temp_program.exe 2>&1";
-    std::unique_ptr<FILE, decltype(&_pclose)> runPipe(_popen(runCmd.c_str(), "r"), _pclose);
+    string runCmd = "temp_program.exe 2>&1";
+    unique_ptr<FILE, decltype(&_pclose)> runPipe(_popen(runCmd.c_str(), "r"), _pclose);
     #else
-    std::string runCmd = "./temp_program 2>&1";
-    std::unique_ptr<FILE, decltype(&pclose)> runPipe(popen(runCmd.c_str(), "r"), pclose);
+    string runCmd = "./temp_program 2>&1";
+    unique_ptr<FILE, decltype(&pclose)> runPipe(popen(runCmd.c_str(), "r"), pclose);
     #endif
     
     if (!runPipe) {
@@ -139,7 +139,7 @@ void CodeEditorScreen::executeCode() {
         return;
     }
     
-    std::string programOutput;
+    string programOutput;
     while (fgets(buffer.data(), buffer.size(), runPipe.get()) != nullptr) {
         programOutput += buffer.data();
     }
@@ -151,11 +151,11 @@ void CodeEditorScreen::executeCode() {
     updateOutputDisplay();
     
     // Cleanup
-    std::remove("temp_code.cpp");
+    remove("temp_code.cpp");
     #ifdef _WIN32
-    std::remove("temp_program.exe");
+    remove("temp_program.exe");
     #else
-    std::remove("temp_program");
+    remove("temp_program");
     #endif
 }
 
@@ -167,23 +167,23 @@ void CodeEditorScreen::clearSelection() {
     selectionStart = selectionEnd = cursorPos;
 }
 
-std::string CodeEditorScreen::getSelectedText() {
+string CodeEditorScreen::getSelectedText() {
     if (!hasSelection()) return "";
-    size_t start = std::min(selectionStart, selectionEnd);
-    size_t end = std::max(selectionStart, selectionEnd);
+    size_t start = min(selectionStart, selectionEnd);
+    size_t end = max(selectionStart, selectionEnd);
     return code.substr(start, end - start);
 }
 
 void CodeEditorScreen::deleteSelection() {
     if (!hasSelection()) return;
-    size_t start = std::min(selectionStart, selectionEnd);
-    size_t end = std::max(selectionStart, selectionEnd);
+    size_t start = min(selectionStart, selectionEnd);
+    size_t end = max(selectionStart, selectionEnd);
     code.erase(start, end - start);
     cursorPos = start;
     clearSelection();
 }
 
-size_t CodeEditorScreen::getCursorPosFromClick(sf::Vector2f mousePos) {
+size_t CodeEditorScreen::getCursorPosFromClick(Vector2f mousePos) {
     // Check if click is within editor bounds (roughly)
     if (mousePos.x < 20 || mousePos.x > 620 || mousePos.y < 50 || mousePos.y > 330) {
         return cursorPos; 
@@ -204,14 +204,14 @@ size_t CodeEditorScreen::getCursorPosFromClick(sf::Vector2f mousePos) {
     }
     
     // Now iterate characters in this line to find closest X
-    std::string& line = lines[lineIndex];
+    string& line = lines[lineIndex];
     float bestDist = 100000.0f;
     size_t bestOffset = 0;
     
     // Check all character positions including the one after the last char
     for (size_t i = 0; i <= line.length(); ++i) {
-        sf::Vector2f charPos = codeText.findCharacterPos(currentPos + i);
-        float dist = std::abs(mousePos.x - charPos.x);
+        Vector2f charPos = codeText.findCharacterPos(currentPos + i);
+        float dist = abs(mousePos.x - charPos.x);
         if (dist < bestDist) {
             bestDist = dist;
             bestOffset = i;
@@ -250,7 +250,7 @@ void CodeEditorScreen::moveCursorUp() {
         int targetColumn = (preferredColumn > 0) ? preferredColumn : columnPos;
         size_t newLineLength = lines[currentLine - 1].length();
         
-        cursorPos = newLineStart + std::min(static_cast<size_t>(targetColumn), newLineLength);
+        cursorPos = newLineStart + min(static_cast<size_t>(targetColumn), newLineLength);
         preferredColumn = targetColumn;
     }
 }
@@ -284,16 +284,16 @@ void CodeEditorScreen::moveCursorDown() {
         int targetColumn = (preferredColumn > 0) ? preferredColumn : columnPos;
         size_t newLineLength = lines[currentLine + 1].length();
         
-        cursorPos = newLineStart + std::min(static_cast<size_t>(targetColumn), newLineLength);
+        cursorPos = newLineStart + min(static_cast<size_t>(targetColumn), newLineLength);
         preferredColumn = targetColumn;
     }
 }
 
-void CodeEditorScreen::drawSelection(sf::RenderWindow& window) {
+void CodeEditorScreen::drawSelection(RenderWindow& window) {
     if (!hasSelection()) return;
     
-    size_t start = std::min(selectionStart, selectionEnd);
-    size_t end = std::max(selectionStart, selectionEnd);
+    size_t start = min(selectionStart, selectionEnd);
+    size_t end = max(selectionStart, selectionEnd);
     
     auto lines = splitLines(code);
     float lineHeight = font.getLineSpacing(14);
@@ -304,28 +304,28 @@ void CodeEditorScreen::drawSelection(sf::RenderWindow& window) {
         size_t lineEndPos = currentPos + lineLen;
         
         // Check intersection with selection
-        size_t selStartInLine = std::max(start, currentPos);
-        size_t selEndInLine = std::min(end, lineEndPos);
+        size_t selStartInLine = max(start, currentPos);
+        size_t selEndInLine = min(end, lineEndPos);
         
         if (selStartInLine < selEndInLine) {
             // This line has selected text
-            sf::Vector2f startPos = codeText.findCharacterPos(selStartInLine);
-            sf::Vector2f endPos = codeText.findCharacterPos(selEndInLine);
+            Vector2f startPos = codeText.findCharacterPos(selStartInLine);
+            Vector2f endPos = codeText.findCharacterPos(selEndInLine);
             
             float width = endPos.x - startPos.x;
             
-            sf::RectangleShape selRect({width, lineHeight});
+            RectangleShape selRect({width, lineHeight});
             selRect.setPosition(startPos);
-            selRect.setFillColor(sf::Color(100, 150, 255, 100));
+            selRect.setFillColor(Color(100, 150, 255, 100));
             window.draw(selRect);
         }
         
         // Handle newline selection
         if (end > lineEndPos && start <= lineEndPos) {
-            sf::Vector2f startPos = codeText.findCharacterPos(lineEndPos);
-            sf::RectangleShape selRect({5.0f, lineHeight}); // 5px width indicator for newline
+            Vector2f startPos = codeText.findCharacterPos(lineEndPos);
+            RectangleShape selRect({5.0f, lineHeight}); // 5px width indicator for newline
             selRect.setPosition(startPos);
-            selRect.setFillColor(sf::Color(100, 150, 255, 100));
+            selRect.setFillColor(Color(100, 150, 255, 100));
             window.draw(selRect);
         }
         
@@ -333,10 +333,10 @@ void CodeEditorScreen::drawSelection(sf::RenderWindow& window) {
     }
 }
 
-AppState CodeEditorScreen::run(sf::RenderWindow& window) {
+AppState CodeEditorScreen::run(RenderWindow& window) {
     while (window.isOpen()) {
         while (const auto event = window.pollEvent()) {
-            if (event->is<sf::Event::Closed>())
+            if (event->is<Event::Closed>())
                 return AppState::EXIT;
             
             // Handle button clicks
@@ -358,9 +358,9 @@ AppState CodeEditorScreen::run(sf::RenderWindow& window) {
             }
             
             // Handle mouse clicks for cursor positioning
-            if (const auto* mouseEvent = event->getIf<sf::Event::MouseButtonPressed>()) {
-                if (mouseEvent->button == sf::Mouse::Button::Left) {
-                    sf::Vector2f mousePos = window.mapPixelToCoords({mouseEvent->position.x, mouseEvent->position.y});
+            if (const auto* mouseEvent = event->getIf<Event::MouseButtonPressed>()) {
+                if (mouseEvent->button == Mouse::Button::Left) {
+                    Vector2f mousePos = window.mapPixelToCoords({mouseEvent->position.x, mouseEvent->position.y});
                     size_t newPos = getCursorPosFromClick(mousePos);
                     
                     if (newPos != cursorPos) {
@@ -373,9 +373,9 @@ AppState CodeEditorScreen::run(sf::RenderWindow& window) {
             }
             
             // Handle mouse drag for selection
-            if (const auto* mouseMoveEvent = event->getIf<sf::Event::MouseMoved>()) {
-                if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && isSelecting) {
-                    sf::Vector2f mousePos = window.mapPixelToCoords({mouseMoveEvent->position.x, mouseMoveEvent->position.y});
+            if (const auto* mouseMoveEvent = event->getIf<Event::MouseMoved>()) {
+                if (Mouse::isButtonPressed(Mouse::Button::Left) && isSelecting) {
+                    Vector2f mousePos = window.mapPixelToCoords({mouseMoveEvent->position.x, mouseMoveEvent->position.y});
                     size_t newPos = getCursorPosFromClick(mousePos);
                     
                     if (newPos != cursorPos) {
@@ -387,14 +387,14 @@ AppState CodeEditorScreen::run(sf::RenderWindow& window) {
             }
             
             // Handle mouse release
-            if (const auto* mouseReleaseEvent = event->getIf<sf::Event::MouseButtonReleased>()) {
-                if (mouseReleaseEvent->button == sf::Mouse::Button::Left) {
+            if (const auto* mouseReleaseEvent = event->getIf<Event::MouseButtonReleased>()) {
+                if (mouseReleaseEvent->button == Mouse::Button::Left) {
                     isSelecting = false;
                 }
             }
             
             // Handle text input
-            if (const auto* textEvent = event->getIf<sf::Event::TextEntered>()) {
+            if (const auto* textEvent = event->getIf<Event::TextEntered>()) {
                 if (textEvent->unicode < 128) {
                     char c = static_cast<char>(textEvent->unicode);
                     
@@ -429,37 +429,37 @@ AppState CodeEditorScreen::run(sf::RenderWindow& window) {
             }
             
             // Handle special keys
-            if (const auto* keyEvent = event->getIf<sf::Event::KeyPressed>()) {
-                bool shiftPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift) || 
-                                   sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RShift);
-                bool ctrlPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || 
-                                  sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl);
+            if (const auto* keyEvent = event->getIf<Event::KeyPressed>()) {
+                bool shiftPressed = Keyboard::isKeyPressed(Keyboard::Key::LShift) || 
+                                   Keyboard::isKeyPressed(Keyboard::Key::RShift);
+                bool ctrlPressed = Keyboard::isKeyPressed(Keyboard::Key::LControl) || 
+                                  Keyboard::isKeyPressed(Keyboard::Key::RControl);
                 
                 // Clipboard operations
                 if (ctrlPressed) {
-                    if (keyEvent->code == sf::Keyboard::Key::C) {
+                    if (keyEvent->code == Keyboard::Key::C) {
                         // Copy
                         if (hasSelection()) {
-                            sf::Clipboard::setString(getSelectedText());
+                            Clipboard::setString(getSelectedText());
                         }
-                    } else if (keyEvent->code == sf::Keyboard::Key::V) {
+                    } else if (keyEvent->code == Keyboard::Key::V) {
                         // Paste
                         if (hasSelection()) {
                             deleteSelection();
                         }
-                        std::string clipboardText = sf::Clipboard::getString();
+                        string clipboardText = Clipboard::getString();
                         code.insert(cursorPos, clipboardText);
                         cursorPos += clipboardText.length();
                         clearSelection();
                         updateCodeDisplay();
-                    } else if (keyEvent->code == sf::Keyboard::Key::X) {
+                    } else if (keyEvent->code == Keyboard::Key::X) {
                         // Cut
                         if (hasSelection()) {
-                            sf::Clipboard::setString(getSelectedText());
+                            Clipboard::setString(getSelectedText());
                             deleteSelection();
                             updateCodeDisplay();
                         }
-                    } else if (keyEvent->code == sf::Keyboard::Key::A) {
+                    } else if (keyEvent->code == Keyboard::Key::A) {
                         // Select all
                         selectionStart = 0;
                         selectionEnd = code.length();
@@ -469,7 +469,7 @@ AppState CodeEditorScreen::run(sf::RenderWindow& window) {
                 }
                 
                 // Arrow key navigation
-                if (keyEvent->code == sf::Keyboard::Key::Left && cursorPos > 0) {
+                if (keyEvent->code == Keyboard::Key::Left && cursorPos > 0) {
                     if (shiftPressed) {
                         if (!hasSelection()) {
                             selectionStart = cursorPos;
@@ -482,7 +482,7 @@ AppState CodeEditorScreen::run(sf::RenderWindow& window) {
                     }
                     preferredColumn = 0;
                     updateCodeDisplay();
-                } else if (keyEvent->code == sf::Keyboard::Key::Right && cursorPos < code.length()) {
+                } else if (keyEvent->code == Keyboard::Key::Right && cursorPos < code.length()) {
                     if (shiftPressed) {
                         if (!hasSelection()) {
                             selectionStart = cursorPos;
@@ -495,7 +495,7 @@ AppState CodeEditorScreen::run(sf::RenderWindow& window) {
                     }
                     preferredColumn = 0;
                     updateCodeDisplay();
-                } else if (keyEvent->code == sf::Keyboard::Key::Up) {
+                } else if (keyEvent->code == Keyboard::Key::Up) {
                     if (shiftPressed) {
                         if (!hasSelection()) {
                             selectionStart = cursorPos;
@@ -507,7 +507,7 @@ AppState CodeEditorScreen::run(sf::RenderWindow& window) {
                         clearSelection();
                     }
                     updateCodeDisplay();
-                } else if (keyEvent->code == sf::Keyboard::Key::Down) {
+                } else if (keyEvent->code == Keyboard::Key::Down) {
                     if (shiftPressed) {
                         if (!hasSelection()) {
                             selectionStart = cursorPos;
@@ -519,7 +519,7 @@ AppState CodeEditorScreen::run(sf::RenderWindow& window) {
                         clearSelection();
                     }
                     updateCodeDisplay();
-                } else if (keyEvent->code == sf::Keyboard::Key::Home) {
+                } else if (keyEvent->code == Keyboard::Key::Home) {
                     // Move to start of line
                     if (shiftPressed && !hasSelection()) {
                         selectionStart = cursorPos;
@@ -534,7 +534,7 @@ AppState CodeEditorScreen::run(sf::RenderWindow& window) {
                     }
                     preferredColumn = 0;
                     updateCodeDisplay();
-                } else if (keyEvent->code == sf::Keyboard::Key::End) {
+                } else if (keyEvent->code == Keyboard::Key::End) {
                     // Move to end of line
                     if (shiftPressed && !hasSelection()) {
                         selectionStart = cursorPos;
@@ -549,7 +549,7 @@ AppState CodeEditorScreen::run(sf::RenderWindow& window) {
                     }
                     preferredColumn = 0;
                     updateCodeDisplay();
-                } else if (keyEvent->code == sf::Keyboard::Key::Tab) {
+                } else if (keyEvent->code == Keyboard::Key::Tab) {
                     // Insert 4 spaces for tab
                     if (hasSelection()) {
                         deleteSelection();
@@ -558,7 +558,7 @@ AppState CodeEditorScreen::run(sf::RenderWindow& window) {
                     cursorPos += 4;
                     clearSelection();
                     updateCodeDisplay();
-                } else if (keyEvent->code == sf::Keyboard::Key::Delete) {
+                } else if (keyEvent->code == Keyboard::Key::Delete) {
                     // Delete key
                     if (hasSelection()) {
                         deleteSelection();
@@ -580,11 +580,11 @@ AppState CodeEditorScreen::run(sf::RenderWindow& window) {
         window.clear();
         
         // Draw gradient background
-        sf::VertexArray gradient(sf::PrimitiveType::TriangleStrip, 4);
-        gradient[0].position = {0, 0}; gradient[0].color = sf::Color(15, 23, 42);
-        gradient[1].position = {0, 600}; gradient[1].color = sf::Color(30, 41, 59);
-        gradient[2].position = {800, 0}; gradient[2].color = sf::Color(15, 23, 42);
-        gradient[3].position = {800, 600}; gradient[3].color = sf::Color(51, 65, 85);
+        VertexArray gradient(PrimitiveType::TriangleStrip, 4);
+        gradient[0].position = {0, 0}; gradient[0].color = Color(15, 23, 42);
+        gradient[1].position = {0, 600}; gradient[1].color = Color(30, 41, 59);
+        gradient[2].position = {800, 0}; gradient[2].color = Color(15, 23, 42);
+        gradient[3].position = {800, 600}; gradient[3].color = Color(51, 65, 85);
         window.draw(gradient);
         
         particles.draw(window);
