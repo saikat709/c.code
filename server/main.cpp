@@ -12,7 +12,7 @@ int main() {
     Database db;
     if (!db.connect()) {
         cerr << "Failed to connect to database." << endl;
-        // Continue for now to test socket
+        return 1;
     }
 
     Server server;
@@ -20,7 +20,6 @@ int main() {
         return 1;
     }
 
-    // Keep main thread alive
     while (true) {
         this_thread::sleep_for(chrono::seconds(1));
     }

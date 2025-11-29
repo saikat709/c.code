@@ -23,10 +23,6 @@ class CodeEditorScreen {
     Text codeText;
     Text outputText;
     
-    Button runBtn;
-    Button clearBtn;
-    Button logoutBtn;
-    
     // Code content
     string code;
     string output;
@@ -46,6 +42,32 @@ class CodeEditorScreen {
     int codeScrollOffset = 0;
     int outputScrollOffset = 0;
     
+    // Sidebar components
+    RectangleShape sidebarBox;
+    vector<string> fileList;
+    int selectedFileIndex = 0;
+    Button newFileBtn;
+    int sidebarScrollOffset = 0;
+    Text sidebarTitle;
+    
+    // File naming input
+    bool isNamingFile = false;
+    string newFileName;
+    Text fileNameInputText;
+    RectangleShape fileNameInputBox;
+    
+    // Top menu bar components
+    RectangleShape topMenuBar;
+    Button fileMenuBtn;
+    Button editMenuBtn;
+    Button viewMenuBtn;
+    Button runMenuBtn;
+    Button toggleOutputBtn;
+    Button logoutBtn;
+    
+    // Output panel toggle
+    bool outputVisible = false;
+    
     // Helper methods
     void executeCode();
     void updateCodeDisplay();
@@ -61,6 +83,14 @@ class CodeEditorScreen {
     bool hasSelection();
     void clearSelection();
     void drawSelection(RenderWindow& window);
+    
+    // New UI helpers
+    void drawSidebar(RenderWindow& window);
+    void drawTopMenu(RenderWindow& window);
+    void handleFileSelection(Vector2f mousePos);
+    void createNewFile();
+    void toggleOutputPanel();
+    void updateLayout();
 
 public:
     CodeEditorScreen(Font& font, ParticleSystem& particles, Vector2u windowSize);

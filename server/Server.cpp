@@ -38,7 +38,6 @@ bool Server::start(int port) {
     isRunning = true;
     cout << "Server listening on 127.0.0.1:" << port << endl;
     
-    // Start listening thread
     thread(&Server::listenForConnections, this).detach();
     
     return true;

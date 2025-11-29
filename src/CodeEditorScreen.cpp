@@ -1,11 +1,11 @@
 #include "CodeEditorScreen.hpp"
+#include <SFML/Graphics.hpp>
 #include <sstream>
 #include <fstream>
 #include <cstdlib>
 #include <array>
 #include <memory>
 #include "UI.hpp"
-#include <SFML/Graphics.hpp>
 
 using namespace std;
 using namespace sf;
@@ -13,46 +13,87 @@ using namespace sf;
 
 CodeEditorScreen::CodeEditorScreen(Font& font, ParticleSystem& particles, Vector2u windowSize)
     : font(font), particles(particles),
-      runBtn(font, "RUN", {650, 20}, {120, 40}),
-      clearBtn(font, "CLEAR", {650, 70}, {120, 40}),
-      logoutBtn(font, "LOGOUT", {650, 520}, {120, 40}),
+      newFileBtn(font, "+ New File", {10, 560}, {180, 35}),
+      fileMenuBtn(font, "File", {205, 5}, {60, 30}),
+      editMenuBtn(font, "Edit", {270, 5}, {60, 30}),
+      viewMenuBtn(font, "View", {335, 5}, {60, 30}),
+      runMenuBtn(font, "Run", {400, 5}, {60, 30}),
+      toggleOutputBtn(font, "Output", {465, 5}, {80, 30}),
+      logoutBtn(font, "Logout", {700, 5}, {90, 30}),
       editorLabel(font, "Code Editor", 18),
       outputLabel(font, "Output", 18),
       codeText(font, "", 14),
-      outputText(font, "", 14)
+      outputText(font, "", 14),
+      sidebarTitle(font, "FILES", 14)
 {
-    // Editor Box (left side, top half)
-    editorBox.setSize({600, 280});
-    editorBox.setPosition({20, 50});
+    // Sidebar Box (left side, full height minus top bar)
+    sidebarBox.setSize({200, 560});
+    sidebarBox.setPosition({0, 40});
+    sidebarBox.setFillColor(Color(20, 30, 45, 240));
+    sidebarBox.setOutlineThickness(1);
+    sidebarBox.setOutlineColor(Color(60, 80, 120));
+    
+    // Sidebar Title
+    sidebarTitle.setFillColor(Color(150, 170, 200));
+    sidebarTitle.setPosition({10, 45});
+    
+    // File naming input box
+    fileNameInputBox.setSize({180, 25});
+    fileNameInputBox.setPosition({10, 70});
+    fileNameInputBox.setFillColor(Color(40, 50, 70));
+    fileNameInputBox.setOutlineThickness(2);
+    fileNameInputBox.setOutlineColor(Color(100, 150, 200));
+    
+    // File naming input text
+    fileNameInputText = Text(font, "", 12);
+    fileNameInputText.setFillColor(Color::White);
+    fileNameInputText.setPosition({15, 73});
+    
+    // Top Menu Bar
+    topMenuBar.setSize({800, 40});
+    topMenuBar.setPosition({0, 0});
+    topMenuBar.setFillColor(Color(25, 35, 50, 250));
+    topMenuBar.setOutlineThickness(1);
+    topMenuBar.setOutlineColor(Color(60, 80, 120));
+    
+    // Editor Box (right side, adjusted for sidebar and top bar)
+    editorBox.setSize({600, 560});
+    editorBox.setPosition({200, 40});
     editorBox.setFillColor(Color(30, 41, 59, 220));
     editorBox.setOutlineThickness(2);
     editorBox.setOutlineColor(Color(100, 150, 200));
     
-    // Output Box (left side, bottom half)
-    outputBox.setSize({600, 230});
-    outputBox.setPosition({20, 350});
+    // Output Box (initially hidden, will be shown when toggled)
+    outputBox.setSize({600, 0});
+    outputBox.setPosition({200, 600});
     outputBox.setFillColor(Color(20, 30, 45, 220));
     outputBox.setOutlineThickness(2);
     outputBox.setOutlineColor(Color(150, 100, 100));
     
+    
     // Labels
     editorLabel.setFillColor(Color::White);
-    editorLabel.setPosition({25, 25});
+    editorLabel.setPosition({205, 45});
     
     outputLabel.setFillColor(Color::White);
-    outputLabel.setPosition({25, 325});
+    outputLabel.setPosition({205, 345});
     
     // Code Text
     codeText.setFillColor(Color(220, 220, 220));
-    codeText.setPosition({30, 60});
+    codeText.setPosition({210, 70});
     
     // Output Text
     outputText.setFillColor(Color(200, 255, 200));
-    outputText.setPosition({30, 360});
+    outputText.setPosition({210, 370});
     
     // Cursor
     cursor.setSize({2, 16});
     cursor.setFillColor(Color::White);
+    
+    // Initialize file list with sample files
+    fileList.push_back("main.cpp");
+    fileList.push_back("temp.cpp");
+    fileList.push_back("utils.cpp");
     
     // Default code template
     code = "#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << \"Hello, World!\" << endl;\n    return 0;\n}\n";
@@ -162,6 +203,100 @@ void CodeEditorScreen::executeCode() {
     #endif
 }
 
+// New helper methods to add after line 192 in CodeEditorScreen.cpp
+
+void CodeEditorScreen::updateLayout() {
+    if (outputVisible) {
+        editorBox.setSize({600, 280});
+        editorBox.setPosition({200, 40});
+        outputBox.setSize({600, 280});
+        outputBox.setPosition({200, 320});
+        editorLabel.setPosition({205, 45});
+        outputLabel.setPosition({205, 325});
+        codeText.setPosition({210, 70});
+        outputText.setPosition({210, 350});
+    } else {
+        editorBox.setSize({600, 560});
+        editorBox.setPosition({200, 40});
+        outputBox.setSize({600, 0});
+        outputBox.setPosition({200, 600});
+        editorLabel.setPosition({205, 45});
+        codeText.setPosition({210, 70});
+    }
+    updateCodeDisplay();
+    updateOutputDisplay();
+}
+
+void CodeEditorScreen::toggleOutputPanel() {
+    outputVisible = !outputVisible;
+    updateLayout();
+}
+
+void CodeEditorScreen::createNewFile() {
+    // Activate file naming mode
+    isNamingFile = true;
+    newFileName = "";
+    fileNameInputText.setString("");
+}
+
+void CodeEditorScreen::handleFileSelection(Vector2f mousePos) {
+    // Determine file list start position based on naming mode
+    float fileListStartY = isNamingFile ? 100.0f : 70.0f;
+    
+    if (mousePos.x < 0 || mousePos.x > 200 || mousePos.y < fileListStartY || mousePos.y > 560) {
+        return;
+    }
+    float lineHeight = 25.0f;
+    int clickedIndex = static_cast<int>((mousePos.y - fileListStartY) / lineHeight);
+    if (clickedIndex >= 0 && clickedIndex < static_cast<int>(fileList.size())) {
+        selectedFileIndex = clickedIndex;
+        editorLabel.setString("Code Editor - " + fileList[selectedFileIndex]);
+    }
+}
+
+void CodeEditorScreen::drawSidebar(RenderWindow& window) {
+    window.draw(sidebarBox);
+    window.draw(sidebarTitle);
+    
+    // Draw file naming input if active
+    float fileListStartY = 70;
+    if (isNamingFile) {
+        window.draw(fileNameInputBox);
+        window.draw(fileNameInputText);
+        fileListStartY = 100;  // Start file list below input
+    }
+    
+    // Draw file list
+    float yPos = fileListStartY;
+    float lineHeight = 25.0f;
+    for (size_t i = 0; i < fileList.size(); i++) {
+        if (static_cast<int>(i) == selectedFileIndex) {
+            RectangleShape highlight({195, lineHeight - 2});
+            highlight.setPosition({2.5f, yPos});
+            highlight.setFillColor(Color(60, 80, 120, 150));
+            window.draw(highlight);
+        }
+        Text fileText(font, fileList[i], 12);
+        fileText.setPosition({10, yPos + 3});
+        fileText.setFillColor(Color(200, 220, 240));
+        window.draw(fileText);
+        yPos += lineHeight;
+    }
+    
+    // Draw new file button at bottom
+    newFileBtn.draw(window);
+}
+
+void CodeEditorScreen::drawTopMenu(RenderWindow& window) {
+    window.draw(topMenuBar);
+    fileMenuBtn.draw(window);
+    editMenuBtn.draw(window);
+    viewMenuBtn.draw(window);
+    runMenuBtn.draw(window);
+    toggleOutputBtn.draw(window);
+    logoutBtn.draw(window);
+}
+
 bool CodeEditorScreen::hasSelection() {
     return selectionStart != selectionEnd;
 }
@@ -187,8 +322,9 @@ void CodeEditorScreen::deleteSelection() {
 }
 
 size_t CodeEditorScreen::getCursorPosFromClick(Vector2f mousePos) {
-    // Check if click is within editor bounds (roughly)
-    if (mousePos.x < 20 || mousePos.x > 620 || mousePos.y < 50 || mousePos.y > 330) {
+    // Check if click is within editor bounds (adjusted for new layout)
+    float editorHeight = outputVisible ? 280.0f : 560.0f;
+    if (mousePos.x < 200 || mousePos.x > 800 || mousePos.y < 70 || mousePos.y > (40 + editorHeight)) {
         return cursorPos; 
     }
     
@@ -343,34 +479,44 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
                 return AppState::EXIT;
             
             // Handle button clicks
-            if (runBtn.isClicked(*event, window)) {
+            if (runMenuBtn.isClicked(*event, window)) {
+                if (!outputVisible) {
+                    toggleOutputPanel();
+                }
                 executeCode();
             }
             
-            if (clearBtn.isClicked(*event, window)) {
-                code.clear();
-                cursorPos = 0;
-                output.clear();
-                clearSelection();
-                updateCodeDisplay();
-                updateOutputDisplay();
+            if (toggleOutputBtn.isClicked(*event, window)) {
+                toggleOutputPanel();
+            }
+            
+            if (newFileBtn.isClicked(*event, window)) {
+                createNewFile();
             }
             
             if (logoutBtn.isClicked(*event, window)) {
                 return AppState::LOGIN;
             }
             
-            // Handle mouse clicks for cursor positioning
+            // Handle mouse clicks for cursor positioning and file selection
             if (const auto* mouseEvent = event->getIf<Event::MouseButtonPressed>()) {
                 if (mouseEvent->button == Mouse::Button::Left) {
                     Vector2f mousePos = window.mapPixelToCoords({mouseEvent->position.x, mouseEvent->position.y});
-                    size_t newPos = getCursorPosFromClick(mousePos);
                     
-                    if (newPos != cursorPos) {
-                        cursorPos = newPos;
-                        clearSelection();
-                        isSelecting = true;
-                        updateCodeDisplay();
+                    // Check if click is in sidebar
+                    if (mousePos.x >= 0 && mousePos.x <= 200 && mousePos.y >= 90) {
+                        handleFileSelection(mousePos);
+                    }
+                    // Check if click is in editor area
+                    else if (mousePos.x >= 200 && mousePos.x <= 800 && mousePos.y >= 40) {
+                        size_t newPos = getCursorPosFromClick(mousePos);
+                        
+                        if (newPos != cursorPos) {
+                            cursorPos = newPos;
+                            clearSelection();
+                            isSelecting = true;
+                            updateCodeDisplay();
+                        }
                     }
                 }
             }
@@ -400,6 +546,41 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
             if (const auto* textEvent = event->getIf<Event::TextEntered>()) {
                 if (textEvent->unicode < 128) {
                     char c = static_cast<char>(textEvent->unicode);
+                    
+                    // Handle file naming input
+                    if (isNamingFile) {
+                        if (c == '\r' || c == '\n') { // Enter - confirm file name
+                            if (!newFileName.empty()) {
+                                // Add .cpp extension if not present
+                                if (newFileName.find(".") == string::npos) {
+                                    newFileName += ".cpp";
+                                }
+                                fileList.push_back(newFileName);
+                                selectedFileIndex = fileList.size() - 1;
+                                code = "// " + newFileName + "\n\n";
+                                cursorPos = code.length();
+                                output.clear();
+                                clearSelection();
+                                updateCodeDisplay();
+                                updateOutputDisplay();
+                                editorLabel.setString("Code Editor - " + newFileName);
+                            }
+                            isNamingFile = false;
+                            newFileName = "";
+                        } else if (c == 27) { // Escape - cancel
+                            isNamingFile = false;
+                            newFileName = "";
+                        } else if (c == '\b') { // Backspace
+                            if (!newFileName.empty()) {
+                                newFileName.pop_back();
+                                fileNameInputText.setString(newFileName);
+                            }
+                        } else if (c >= 32 && c < 127) { // Printable characters
+                            newFileName += c;
+                            fileNameInputText.setString(newFileName);
+                        }
+                        continue; // Skip regular text input handling
+                    }
                     
                     if (c == '\b') { // Backspace
                         if (hasSelection()) {
@@ -574,8 +755,12 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
         }
         
         // Update buttons
-        runBtn.update(window);
-        clearBtn.update(window);
+        newFileBtn.update(window);
+        fileMenuBtn.update(window);
+        editMenuBtn.update(window);
+        viewMenuBtn.update(window);
+        runMenuBtn.update(window);
+        toggleOutputBtn.update(window);
         logoutBtn.update(window);
         particles.update();
         
@@ -593,17 +778,21 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
         particles.draw(window);
         
         // Draw UI
+        drawTopMenu(window);
+        drawSidebar(window);
+        
         window.draw(editorBox);
-        window.draw(outputBox);
+        if (outputVisible) {
+            window.draw(outputBox);
+            window.draw(outputLabel);
+            window.draw(outputText);
+        }
         window.draw(editorLabel);
-        window.draw(outputLabel);
         
         // Draw selection before text
         drawSelection(window);
         
         window.draw(codeText);
-        window.draw(outputText);
-        
         // Draw blinking cursor
         if (cursorBlink.getElapsedTime().asSeconds() < 0.5f) {
             window.draw(cursor);
@@ -611,10 +800,6 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
         if (cursorBlink.getElapsedTime().asSeconds() >= 1.0f) {
             cursorBlink.restart();
         }
-        
-        runBtn.draw(window);
-        clearBtn.draw(window);
-        logoutBtn.draw(window);
         
         window.display();
     }
