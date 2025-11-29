@@ -7,17 +7,41 @@
 using namespace std;
 using namespace sf;
 
+struct ProjectItem {
+    string name;
+    int fileCount;
+    FloatRect bounds;
+    bool isHovered = false;
+};
+
 class ProjectSelectScreen {
     Font& font;
     ParticleSystem& particles;
     
-    RectangleShape card;
+    // Main UI
     Text title;
-    InputField userField;
-    InputField passField;
-    InputField confirmPassField;
-    Button registerBtn;
-    Button backBtn;
+    
+    // Create New Section
+    InputField newProjectNameField;
+    Button createProjectBtn;
+    
+    // Project List
+    Text yourProjectsLabel;
+    vector<ProjectItem> projects;
+    
+    // Bottom Actions
+    Button openFriendsBtn;
+    
+    // Friend Project Popup
+    bool showFriendPopup = false;
+    RectangleShape popupOverlay;
+    RectangleShape popupCard;
+    Text popupTitle;
+    InputField friendProjectIdField;
+    InputField friendAccessKeyField;
+    Button friendEnterBtn;
+    Button closePopupBtn;
+    
     Text statusMsg;
 
 public:

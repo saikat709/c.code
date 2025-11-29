@@ -10,9 +10,11 @@
 #include "ProjectSelectScreen.hpp"
 #include "AppState.hpp"
 
+int HEIGHT = 600;
+int WIDTH  = 800;
 
 int main() {
-    RenderWindow window(VideoMode({800, 600}), "C.CODE", Style::Titlebar | Style::Close);
+    RenderWindow window(VideoMode({WIDTH, HEIGHT}), "C.CODE", Style::Titlebar | Style::Close | Style::Resize);
     window.setFramerateLimit(60);
 
     Font font;
@@ -21,22 +23,22 @@ int main() {
     }
 
     // Shared
-    ParticleSystem particles(50, {800, 600});
+    ParticleSystem particles(50, {WIDTH, HEIGHT});
     
     // Screens
-    LoginScreen loginScreen(font, particles, {800, 600});
-    RegisterScreen registerScreen(font, particles, {800, 600});
-    CodeEditorScreen codeEditorScreen(font, particles, {800, 600});
-    ProjectSelectScreen projectSelectScreen(font, particles, {800, 600});
+    LoginScreen loginScreen(font, particles, {WIDTH, HEIGHT});
+    RegisterScreen registerScreen(font, particles, {WIDTH, HEIGHT});
+    CodeEditorScreen codeEditorScreen(font, particles, {WIDTH, HEIGHT});
+    ProjectSelectScreen projectSelectScreen(font, particles, {WIDTH, HEIGHT});
 
     AppState currentState = AppState::PROJECT_SELECT;
 
     // Background gradient (shared)
     VertexArray gradient(PrimitiveType::TriangleStrip, 4);
     gradient[0].position = {0, 0};     gradient[0].color = Color(15, 23, 42);
-    gradient[1].position = {0, 600};   gradient[1].color = Color(30, 41, 59);
-    gradient[2].position = {800, 0};   gradient[2].color = Color(15, 23, 42);
-    gradient[3].position = {800, 600}; gradient[3].color = Color(51, 65, 85);
+    gradient[1].position = {0, HEIGHT};   gradient[1].color = Color(30, 41, 59);
+    gradient[2].position = {WIDTH, 0};   gradient[2].color = Color(15, 23, 42);
+    gradient[3].position = {WIDTH, HEIGHT}; gradient[3].color = Color(51, 65, 85);
 
     while (currentState != AppState::EXIT) {
         if (currentState == AppState::LOGIN) {

@@ -1,26 +1,9 @@
 #!/bin/bash
-
-# Create build directory if it doesn't exist
 mkdir -p bin
-
-# Compilation settings
-CXX=g++
-CXXFLAGS="-std=c++23 -Wall -Wextra"
-INCLUDES="-Iinclude -Iinclude\\server"
-LIBS="-lsfml-graphics"
-
-# Output file
-OUTPUT="bin/Server.exe"
-
-# Source files
-SOURCES="server/* lib/*"
-
-echo "Compiling..."
-$CXX $CXXFLAGS $INCLUDES $SOURCES -o $OUTPUT $LIBS
-
+g++ -std=c++23 -Iinclude -Iinclude/server server/* -o bin/Server.exe -lws2_32 -lsqlite3
 if [ $? -eq 0 ]; then
     echo "Compilation successful! Running application..."
-    ./$OUTPUT
+    ./bin/Server.exe
 else
     echo "Compilation failed."
     exit 1
