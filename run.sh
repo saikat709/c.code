@@ -7,7 +7,7 @@ mkdir -p bin
 CXX=g++
 CXXFLAGS="-std=c++23 -Wall -Wextra"
 INCLUDES="-Iinclude -Iinclude\\src"
-LIBS="-lsfml-graphics -lsfml-window -lsfml-system"
+LIBS="-lsfml-graphics -lsfml-window -lsfml-system -lws2_32"
 
 # Output file
 OUTPUT="bin/C.Code.exe"

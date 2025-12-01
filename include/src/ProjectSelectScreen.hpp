@@ -4,47 +4,44 @@
 #include "UI.hpp"
 #include "ParticleSystem.hpp"
 
-using namespace std;
-using namespace sf;
-
 struct ProjectItem {
-    string name;
+    std::string name;
     int fileCount;
-    FloatRect bounds;
+    sf::FloatRect bounds;
     bool isHovered = false;
 };
 
 class ProjectSelectScreen {
-    Font& font;
+    sf::Font& font;
     ParticleSystem& particles;
     
     // Main UI
-    Text title;
+    sf::Text title;
     
     // Create New Section
     InputField newProjectNameField;
     Button createProjectBtn;
     
     // Project List
-    Text yourProjectsLabel;
-    vector<ProjectItem> projects;
+    sf::Text yourProjectsLabel;
+    std::vector<ProjectItem> projects;
     
     // Bottom Actions
     Button openFriendsBtn;
     
     // Friend Project Popup
     bool showFriendPopup = false;
-    RectangleShape popupOverlay;
-    RectangleShape popupCard;
-    Text popupTitle;
+    sf::RectangleShape popupOverlay;
+    sf::RectangleShape popupCard;
+    sf::Text popupTitle;
     InputField friendProjectIdField;
     InputField friendAccessKeyField;
     Button friendEnterBtn;
     Button closePopupBtn;
     
-    Text statusMsg;
+    sf::Text statusMsg;
 
 public:
-    ProjectSelectScreen(Font& font, ParticleSystem& particles, Vector2u windowSize);
-    AppState run(RenderWindow& window);
+    ProjectSelectScreen(sf::Font& font, ParticleSystem& particles, sf::Vector2u windowSize);
+    AppState run(sf::RenderWindow& window);
 };

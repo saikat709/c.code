@@ -24,7 +24,8 @@ CodeEditorScreen::CodeEditorScreen(Font& font, ParticleSystem& particles, Vector
       outputLabel(font, "Output", 18),
       codeText(font, "", 14),
       outputText(font, "", 14),
-      sidebarTitle(font, "FILES", 14)
+      sidebarTitle(font, "FILES", 14),
+      fileNameInputText(font, "", 12)
 {
     // Sidebar Box (left side, full height minus top bar)
     sidebarBox.setSize({200, 560});

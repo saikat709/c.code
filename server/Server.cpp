@@ -1,6 +1,9 @@
 #include "Server.hpp"
+#include "json.hpp"
+#include <iostream>
 
 using namespace std;
+using json = nlohmann::json;
 
 Server::Server() : serverSocket(INVALID_SOCKET), isRunning(false) {
     WSADATA wsaData;
@@ -57,7 +60,7 @@ void Server::listenForConnections() {
 }
 
 void Server::handleClient(SOCKET clientSocket) {
-    char buffer[1024];
+    char buffer[4096];
     while (true) {
         int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
         if (bytesReceived <= 0) {
@@ -67,9 +70,51 @@ void Server::handleClient(SOCKET clientSocket) {
         }
         
         buffer[bytesReceived] = '\0';
-        cout << "Received: " << buffer << endl;
+        string receivedData(buffer);
+        cout << "Received: " << receivedData << endl;
         
-        // Echo back for now
-        send(clientSocket, buffer, bytesReceived, 0);
+        try {
+            json request = json::parse(receivedData);
+            string action = request["action"];
+            json response;
+
+            if (action == "login") {
+                string username = request["username"];
+                string password = request["password"];
+                cout << "Action: Login, Username: " << username << endl;
+                
+                // TODO: Validate against database
+                if (username == "admin" && password == "admin") {
+                    response["status"] = "success";
+                    response["message"] = "Login successful";
+                } else {
+                    response["status"] = "error";
+                    response["message"] = "Invalid credentials";
+                }
+            } else if (action == "register") {
+                string username = request["username"];
+                string password = request["password"];
+                string email = request["email"];
+                cout << "Action: Register, Username: " << username << ", Email: " << email << endl;
+
+                // TODO: Save to database
+                response["status"] = "success";
+                response["message"] = "Registration successful";
+            } else {
+                response["status"] = "error";
+                response["message"] = "Unknown action";
+            }
+
+            string responseStr = response.dump();
+            send(clientSocket, responseStr.c_str(), responseStr.length(), 0);
+            cout << "Sent: " << responseStr << endl;
+
+        } catch (const json::parse_error& e) {
+            cerr << "JSON Parse Error: " << e.what() << endl;
+            string errorMsg = "{\"status\":\"error\",\"message\":\"Invalid JSON\"}";
+            send(clientSocket, errorMsg.c_str(), errorMsg.length(), 0);
+        } catch (const exception& e) {
+            cerr << "Error: " << e.what() << endl;
+        }
     }
 }

@@ -7,30 +7,27 @@
 #include "AppState.hpp"
 #include "UI.hpp"
 
-using namespace std;
-using namespace sf;
-
 
 class CodeEditorScreen {
-    Font& font;
+    sf::Font& font;
     ParticleSystem& particles;
     
     // UI Components
-    RectangleShape editorBox;
-    RectangleShape outputBox;
-    Text editorLabel;
-    Text outputLabel;
-    Text codeText;
-    Text outputText;
+    sf::RectangleShape editorBox;
+    sf::RectangleShape outputBox;
+    sf::Text editorLabel;
+    sf::Text outputLabel;
+    sf::Text codeText;
+    sf::Text outputText;
     
     // Code content
-    string code;
-    string output;
+    std::string code;
+    std::string output;
     
     // Cursor and editing
     size_t cursorPos = 0;
-    RectangleShape cursor;
-    Clock cursorBlink;
+    sf::RectangleShape cursor;
+    sf::Clock cursorBlink;
     
     // Text selection
     size_t selectionStart = 0;
@@ -43,21 +40,21 @@ class CodeEditorScreen {
     int outputScrollOffset = 0;
     
     // Sidebar components
-    RectangleShape sidebarBox;
-    vector<string> fileList;
+    sf::RectangleShape sidebarBox;
+    std::vector<std::string> fileList;
     int selectedFileIndex = 0;
     Button newFileBtn;
     int sidebarScrollOffset = 0;
-    Text sidebarTitle;
+    sf::Text sidebarTitle;
     
     // File naming input
     bool isNamingFile = false;
-    string newFileName;
-    Text fileNameInputText;
-    RectangleShape fileNameInputBox;
+    std::string newFileName;
+    sf::Text fileNameInputText;
+    sf::RectangleShape fileNameInputBox;
     
     // Top menu bar components
-    RectangleShape topMenuBar;
+    sf::RectangleShape topMenuBar;
     Button fileMenuBtn;
     Button editMenuBtn;
     Button viewMenuBtn;
@@ -72,27 +69,27 @@ class CodeEditorScreen {
     void executeCode();
     void updateCodeDisplay();
     void updateOutputDisplay();
-    vector<string> splitLines(const string& text);
+    std::vector<std::string> splitLines(const std::string& text);
     
     // Cursor and selection helpers
-    size_t getCursorPosFromClick(Vector2f mousePos);
+    size_t getCursorPosFromClick(sf::Vector2f mousePos);
     void moveCursorUp();
     void moveCursorDown();
     void deleteSelection();
-    string getSelectedText();
+    std::string getSelectedText();
     bool hasSelection();
     void clearSelection();
-    void drawSelection(RenderWindow& window);
+    void drawSelection(sf::RenderWindow& window);
     
     // New UI helpers
-    void drawSidebar(RenderWindow& window);
-    void drawTopMenu(RenderWindow& window);
-    void handleFileSelection(Vector2f mousePos);
+    void drawSidebar(sf::RenderWindow& window);
+    void drawTopMenu(sf::RenderWindow& window);
+    void handleFileSelection(sf::Vector2f mousePos);
     void createNewFile();
     void toggleOutputPanel();
     void updateLayout();
 
 public:
-    CodeEditorScreen(Font& font, ParticleSystem& particles, Vector2u windowSize);
-    AppState run(RenderWindow& window);
+    CodeEditorScreen(sf::Font& font, ParticleSystem& particles, sf::Vector2u windowSize);
+    AppState run(sf::RenderWindow& window);
 };

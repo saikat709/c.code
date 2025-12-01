@@ -3,23 +3,22 @@
 #include "AppState.hpp"
 #include "UI.hpp"
 #include "ParticleSystem.hpp"
-
-using namespace std;
-using namespace sf;
+#include "NetworkClient.hpp"
 
 class LoginScreen {
-    Font& font;
+    sf::Font& font;
     ParticleSystem& particles;
+    NetworkClient& networkClient;
     
-    RectangleShape card;
-    Text title;
+    sf::RectangleShape card;
+    sf::Text title;
     InputField userField;
     InputField passField;
     Button loginBtn;
     Button registerBtn; // Button to switch to register screen
-    Text statusMsg;
+    sf::Text statusMsg;
 
 public:
-    LoginScreen(Font& font, ParticleSystem& particles, Vector2u windowSize);
-    AppState run(RenderWindow& window);
+    LoginScreen(sf::Font& font, ParticleSystem& particles, sf::Vector2u windowSize, NetworkClient& networkClient);
+    AppState run(sf::RenderWindow& window);
 };

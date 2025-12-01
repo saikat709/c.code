@@ -1,5 +1,8 @@
 #include "UI.hpp"
 
+using namespace std;
+using namespace sf;
+
 // --- InputField ---
 InputField::InputField(const Font& font, const string& placeholder, Vector2f pos, Vector2f size, bool password) 
     : text(font, "", 18), placeholderText(font, placeholder, 18), isPassword(password) {

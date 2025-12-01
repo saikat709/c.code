@@ -1,3 +1,4 @@
+#include "NetworkClient.hpp"
 #include <iostream>
 
 #include <SFML/Graphics.hpp>
@@ -10,11 +11,14 @@
 #include "ProjectSelectScreen.hpp"
 #include "AppState.hpp"
 
-int HEIGHT = 600;
-int WIDTH  = 800;
+using namespace std;
+using namespace sf;
+
+float HEIGHT = 600;
+float WIDTH  = 800;
 
 int main() {
-    RenderWindow window(VideoMode({WIDTH, HEIGHT}), "C.CODE", Style::Titlebar | Style::Close | Style::Resize);
+    RenderWindow window(VideoMode({(unsigned int)WIDTH, (unsigned int)HEIGHT}), "C.CODE", Style::Titlebar | Style::Close | Style::Resize);
     window.setFramerateLimit(60);
 
     Font font;
@@ -22,14 +26,21 @@ int main() {
         if (!font.openFromFile("C:/Windows/Fonts/arial.ttf")) return 1;
     }
 
+    // Network Client
+    NetworkClient networkClient;
+    if (!networkClient.connectToServer("127.0.0.1", 8080)) {
+        cerr << "Failed to connect to server. Running in offline mode (or exiting?)" << endl;
+        // For now, we might want to continue or exit. Let's continue but logging will fail.
+    }
+
     // Shared
-    ParticleSystem particles(50, {WIDTH, HEIGHT});
+    ParticleSystem particles(50, {(unsigned int)WIDTH, (unsigned int)HEIGHT});
     
     // Screens
-    LoginScreen loginScreen(font, particles, {WIDTH, HEIGHT});
-    RegisterScreen registerScreen(font, particles, {WIDTH, HEIGHT});
-    CodeEditorScreen codeEditorScreen(font, particles, {WIDTH, HEIGHT});
-    ProjectSelectScreen projectSelectScreen(font, particles, {WIDTH, HEIGHT});
+    LoginScreen loginScreen(font, particles, {(unsigned int)WIDTH, (unsigned int)HEIGHT}, networkClient);
+    RegisterScreen registerScreen(font, particles, {(unsigned int)WIDTH, (unsigned int)HEIGHT}, networkClient);
+    CodeEditorScreen codeEditorScreen(font, particles, {(unsigned int)WIDTH, (unsigned int)HEIGHT});
+    ProjectSelectScreen projectSelectScreen(font, particles, {(unsigned int)WIDTH, (unsigned int)HEIGHT});
 
     AppState currentState = AppState::PROJECT_SELECT;
 

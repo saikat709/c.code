@@ -1,11 +1,14 @@
 #include "LoginScreen.hpp"
 #include "login.hpp"
+#include <iostream>
+#include "json.hpp"
 
 using namespace std;
 using namespace sf;
+using json = nlohmann::json;
 
-LoginScreen::LoginScreen(Font& font, ParticleSystem& particles, Vector2u windowSize)
-    : font(font), particles(particles),
+LoginScreen::LoginScreen(Font& font, ParticleSystem& particles, Vector2u windowSize, NetworkClient& networkClient)
+    : font(font), particles(particles), networkClient(networkClient),
       userField(font, "Username", {275, 240}, {250, 40}),
       passField(font, "Password", {275, 300}, {250, 40}, true),
       loginBtn(font, "LOGIN", {275, 370}, {250, 45}),
@@ -47,10 +50,18 @@ AppState LoginScreen::run(RenderWindow& window) {
             }
 
             if (loginBtn.isClicked(*event, window)) {
-                if (login::authenticate(userField.getString(), passField.getString())) {
+                json request;
+                request["action"] = "login";
+                request["username"] = userField.getString();
+                request["password"] = passField.getString();
+
+                json response = networkClient.sendRequest(request);
+                
+                if (response["status"] == "success") {
                     return AppState::PROJECT_SELECT;
                 } else {
-                    statusMsg.setString("Invalid Username or Password");
+                    string msg = response.value("message", "Login failed");
+                    statusMsg.setString(msg);
                     statusMsg.setFillColor(Color::Red);
                 }
             }

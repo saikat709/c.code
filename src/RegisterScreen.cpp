@@ -1,10 +1,13 @@
 #include "RegisterScreen.hpp"
+#include "json.hpp"
+#include <iostream>
 
 using namespace std;
 using namespace sf;
+using json = nlohmann::json;
 
-RegisterScreen::RegisterScreen(Font& font, ParticleSystem& particles, Vector2u windowSize)
-    : font(font), particles(particles),
+RegisterScreen::RegisterScreen(Font& font, ParticleSystem& particles, Vector2u windowSize, NetworkClient& networkClient)
+    : font(font), particles(particles), networkClient(networkClient),
       userField(font, "Username", {275, 200}, {250, 40}),
       passField(font, "Password", {275, 260}, {250, 40}, true),
       confirmPassField(font, "Confirm Password", {275, 320}, {250, 40}, true),
@@ -60,9 +63,23 @@ AppState RegisterScreen::run(RenderWindow& window) {
                     statusMsg.setString("Passwords do not match");
                     statusMsg.setFillColor(Color::Red);
                 } else {
-                    statusMsg.setString("Account Created!");
-                    statusMsg.setFillColor(Color::Green);
-                    // In a real app, save the user here
+                    json request;
+                    request["action"] = "register";
+                    request["username"] = userField.getString();
+                    request["password"] = passField.getString();
+                    request["email"] = ""; // Add email field later if needed
+
+                    json response = networkClient.sendRequest(request);
+
+                    if (response["status"] == "success") {
+                        statusMsg.setString("Account Created!");
+                        statusMsg.setFillColor(Color::Green);
+                        // Optional: Delay or wait for user to click back
+                    } else {
+                        string msg = response.value("message", "Registration failed");
+                        statusMsg.setString(msg);
+                        statusMsg.setFillColor(Color::Red);
+                    }
                 }
             }
 
