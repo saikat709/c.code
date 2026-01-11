@@ -13,8 +13,8 @@ LoginScreen::LoginScreen(Font& font, ParticleSystem& particles, Vector2u windowS
       passField(font, "Password", {275, 300}, {250, 40}, true),
       loginBtn(font, "LOGIN", {275, 370}, {250, 45}),
       registerBtn(font, "Create Account", {275, 430}, {250, 30}),
-      statusMsg(font, "", 16),
-      title(font, "Welcome Back", 32)
+      statusMsg("", font, 16),
+      title("Welcome Back", font, 32)
 {
     card.setSize({350, 450}); 
     card.setOrigin({175, 225});
@@ -25,7 +25,7 @@ LoginScreen::LoginScreen(Font& font, ParticleSystem& particles, Vector2u windowS
 
     title.setFillColor(Color::White);
     FloatRect titleBounds = title.getLocalBounds();
-    title.setOrigin({titleBounds.position.x + titleBounds.size.x / 2.0f, titleBounds.position.y + titleBounds.size.y / 2.0f});
+    title.setOrigin({titleBounds.getPosition().x + titleBounds.getSize().x / 2.0f, titleBounds.getPosition().y + titleBounds.getSize().y / 2.0f});
     title.setPosition({(float)windowSize.x / 2, 150});
     
     statusMsg.setFillColor(Color::Red);
@@ -34,22 +34,22 @@ LoginScreen::LoginScreen(Font& font, ParticleSystem& particles, Vector2u windowS
 
 AppState LoginScreen::run(RenderWindow& window) {
     while (window.isOpen()) {
-        while (const auto event = window.pollEvent()) {
-            if (event->is<Event::Closed>())
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed)
                 return AppState::EXIT;
             
-            userField.handleEvent(*event, window);
-            passField.handleEvent(*event, window);
-
-            if (const auto* keyEvent = event->getIf<Event::KeyPressed>()) {
-                if (keyEvent->code == Keyboard::Key::Tab) {
+            userField.handleEvent(event, window);
+            passField.handleEvent(event, window);
+            if (event.type == sf::Event::KeyPressed) {
+                if (event.key.code == sf::Keyboard::Tab) {
                     bool uFocus = userField.getFocused();
                     userField.setFocused(!uFocus);
                     passField.setFocused(uFocus);
                 }
             }
 
-            if (loginBtn.isClicked(*event, window)) {
+            if (loginBtn.isClicked(event, window)) {
                 json request;
                 request["action"] = "login";
                 request["username"] = userField.getString();
@@ -66,7 +66,7 @@ AppState LoginScreen::run(RenderWindow& window) {
                 }
             }
 
-            if (registerBtn.isClicked(*event, window)) {
+            if (registerBtn.isClicked(event, window)) {
                 return AppState::REGISTER;
             }
         }

@@ -20,12 +20,12 @@ CodeEditorScreen::CodeEditorScreen(Font& font, ParticleSystem& particles, Vector
       runMenuBtn(font, "Run", {400, 5}, {60, 30}),
       toggleOutputBtn(font, "Output", {465, 5}, {80, 30}),
       logoutBtn(font, "Logout", {700, 5}, {90, 30}),
-      editorLabel(font, "Code Editor", 18),
-      outputLabel(font, "Output", 18),
-      codeText(font, "", 14),
-      outputText(font, "", 14),
-      sidebarTitle(font, "FILES", 14),
-      fileNameInputText(font, "", 12)
+      editorLabel("Code Editor", font, 18),
+      outputLabel("Output", font, 18),
+      codeText("", font, 14),
+      outputText("", font, 14),
+      sidebarTitle("FILES", font, 14),
+      fileNameInputText("", font, 12)
 {
     // Sidebar Box (left side, full height minus top bar)
     sidebarBox.setSize({200, 560});
@@ -46,7 +46,7 @@ CodeEditorScreen::CodeEditorScreen(Font& font, ParticleSystem& particles, Vector
     fileNameInputBox.setOutlineColor(Color(100, 150, 200));
     
     // File naming input text
-    fileNameInputText = Text(font, "", 12);
+    fileNameInputText = Text("", font, 12);
     fileNameInputText.setFillColor(Color::White);
     fileNameInputText.setPosition({15, 73});
     
@@ -171,11 +171,11 @@ void CodeEditorScreen::executeCode() {
     updateOutputDisplay();
     
     #ifdef _WIN32
-    string runCmd = "temp_program.exe 2>&1";
-    unique_ptr<FILE, decltype(&_pclose)> runPipe(_popen(runCmd.c_str(), "r"), _pclose);
+        string runCmd = "temp_program.exe 2>&1";
+        unique_ptr<FILE, decltype(&_pclose)> runPipe(_popen(runCmd.c_str(), "r"), _pclose);
     #else
-    string runCmd = "./temp_program 2>&1";
-    unique_ptr<FILE, decltype(&pclose)> runPipe(popen(runCmd.c_str(), "r"), pclose);
+        string runCmd = "./temp_program 2>&1";
+        unique_ptr<FILE, decltype(&pclose)> runPipe(popen(runCmd.c_str(), "r"), pclose);
     #endif
     
     if (!runPipe) {
@@ -277,7 +277,7 @@ void CodeEditorScreen::drawSidebar(RenderWindow& window) {
             highlight.setFillColor(Color(60, 80, 120, 150));
             window.draw(highlight);
         }
-        Text fileText(font, fileList[i], 12);
+        Text fileText(fileList[i], font, 12);
         fileText.setPosition({10, yPos + 3});
         fileText.setFillColor(Color(200, 220, 240));
         window.draw(fileText);
@@ -475,34 +475,35 @@ void CodeEditorScreen::drawSelection(RenderWindow& window) {
 
 AppState CodeEditorScreen::run(RenderWindow& window) {
     while (window.isOpen()) {
-        while (const auto event = window.pollEvent()) {
-            if (event->is<Event::Closed>())
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed)
                 return AppState::EXIT;
             
             // Handle button clicks
-            if (runMenuBtn.isClicked(*event, window)) {
+            if (runMenuBtn.isClicked(event, window)) {
                 if (!outputVisible) {
                     toggleOutputPanel();
                 }
                 executeCode();
             }
             
-            if (toggleOutputBtn.isClicked(*event, window)) {
+            if (toggleOutputBtn.isClicked(event, window)) {
                 toggleOutputPanel();
             }
             
-            if (newFileBtn.isClicked(*event, window)) {
+            if (newFileBtn.isClicked(event, window)) {
                 createNewFile();
             }
             
-            if (logoutBtn.isClicked(*event, window)) {
+            if (logoutBtn.isClicked(event, window)) {
                 return AppState::LOGIN;
             }
             
             // Handle mouse clicks for cursor positioning and file selection
-            if (const auto* mouseEvent = event->getIf<Event::MouseButtonPressed>()) {
-                if (mouseEvent->button == Mouse::Button::Left) {
-                    Vector2f mousePos = window.mapPixelToCoords({mouseEvent->position.x, mouseEvent->position.y});
+            if (event.type == sf::Event::MouseButtonPressed) {
+                if (event.mouseButton.button == sf::Mouse::Button::Left) {
+                    Vector2f mousePos = window.mapPixelToCoords({event.mouseButton.x, event.mouseButton.y});
                     
                     // Check if click is in sidebar
                     if (mousePos.x >= 0 && mousePos.x <= 200 && mousePos.y >= 90) {
@@ -523,9 +524,9 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
             }
             
             // Handle mouse drag for selection
-            if (const auto* mouseMoveEvent = event->getIf<Event::MouseMoved>()) {
-                if (Mouse::isButtonPressed(Mouse::Button::Left) && isSelecting) {
-                    Vector2f mousePos = window.mapPixelToCoords({mouseMoveEvent->position.x, mouseMoveEvent->position.y});
+            if (event.type == sf::Event::MouseMoved) {
+                if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && isSelecting) {
+                    Vector2f mousePos = window.mapPixelToCoords({event.mouseMove.x, event.mouseMove.y});
                     size_t newPos = getCursorPosFromClick(mousePos);
                     
                     if (newPos != cursorPos) {
@@ -537,16 +538,16 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
             }
             
             // Handle mouse release
-            if (const auto* mouseReleaseEvent = event->getIf<Event::MouseButtonReleased>()) {
-                if (mouseReleaseEvent->button == Mouse::Button::Left) {
+            if (event.type == sf::Event::MouseButtonReleased) {
+                if (event.mouseButton.button == sf::Mouse::Button::Left) {
                     isSelecting = false;
                 }
             }
             
             // Handle text input
-            if (const auto* textEvent = event->getIf<Event::TextEntered>()) {
-                if (textEvent->unicode < 128) {
-                    char c = static_cast<char>(textEvent->unicode);
+            if (event.type == sf::Event::TextEntered) {
+                if (event.text.unicode < 128) {
+                    char c = static_cast<char>(event.text.unicode);
                     
                     // Handle file naming input
                     if (isNamingFile) {
@@ -614,20 +615,20 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
             }
             
             // Handle special keys
-            if (const auto* keyEvent = event->getIf<Event::KeyPressed>()) {
-                bool shiftPressed = Keyboard::isKeyPressed(Keyboard::Key::LShift) || 
-                                   Keyboard::isKeyPressed(Keyboard::Key::RShift);
-                bool ctrlPressed = Keyboard::isKeyPressed(Keyboard::Key::LControl) || 
-                                  Keyboard::isKeyPressed(Keyboard::Key::RControl);
+            if (event.type == sf::Event::KeyPressed) {
+                bool shiftPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) || 
+                                   sf::Keyboard::isKeyPressed(sf::Keyboard::RShift);
+                bool ctrlPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::LControl) || 
+                                  sf::Keyboard::isKeyPressed(sf::Keyboard::RControl);
                 
                 // Clipboard operations
                 if (ctrlPressed) {
-                    if (keyEvent->code == Keyboard::Key::C) {
+                    if (event.key.code == sf::Keyboard::C) {
                         // Copy
                         if (hasSelection()) {
                             Clipboard::setString(getSelectedText());
                         }
-                    } else if (keyEvent->code == Keyboard::Key::V) {
+                    } else if (event.key.code == sf::Keyboard::V) {
                         // Paste
                         if (hasSelection()) {
                             deleteSelection();
@@ -637,14 +638,14 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
                         cursorPos += clipboardText.length();
                         clearSelection();
                         updateCodeDisplay();
-                    } else if (keyEvent->code == Keyboard::Key::X) {
+                    } else if (event.key.code == sf::Keyboard::X) {
                         // Cut
                         if (hasSelection()) {
                             Clipboard::setString(getSelectedText());
                             deleteSelection();
                             updateCodeDisplay();
                         }
-                    } else if (keyEvent->code == Keyboard::Key::A) {
+                    } else if (event.key.code == sf::Keyboard::A) {
                         // Select all
                         selectionStart = 0;
                         selectionEnd = code.length();
@@ -654,7 +655,7 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
                 }
                 
                 // Arrow key navigation
-                if (keyEvent->code == Keyboard::Key::Left && cursorPos > 0) {
+                if (event.key.code == sf::Keyboard::Left && cursorPos > 0) {
                     if (shiftPressed) {
                         if (!hasSelection()) {
                             selectionStart = cursorPos;
@@ -667,7 +668,7 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
                     }
                     preferredColumn = 0;
                     updateCodeDisplay();
-                } else if (keyEvent->code == Keyboard::Key::Right && cursorPos < code.length()) {
+                } else if (event.key.code == sf::Keyboard::Right && cursorPos < code.length()) {
                     if (shiftPressed) {
                         if (!hasSelection()) {
                             selectionStart = cursorPos;
@@ -680,7 +681,7 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
                     }
                     preferredColumn = 0;
                     updateCodeDisplay();
-                } else if (keyEvent->code == Keyboard::Key::Up) {
+                } else if (event.key.code == sf::Keyboard::Up) {
                     if (shiftPressed) {
                         if (!hasSelection()) {
                             selectionStart = cursorPos;
@@ -692,7 +693,7 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
                         clearSelection();
                     }
                     updateCodeDisplay();
-                } else if (keyEvent->code == Keyboard::Key::Down) {
+                } else if (event.key.code == sf::Keyboard::Down) {
                     if (shiftPressed) {
                         if (!hasSelection()) {
                             selectionStart = cursorPos;
@@ -704,7 +705,7 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
                         clearSelection();
                     }
                     updateCodeDisplay();
-                } else if (keyEvent->code == Keyboard::Key::Home) {
+                } else if (event.key.code == sf::Keyboard::Home) {
                     // Move to start of line
                     if (shiftPressed && !hasSelection()) {
                         selectionStart = cursorPos;
@@ -719,7 +720,7 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
                     }
                     preferredColumn = 0;
                     updateCodeDisplay();
-                } else if (keyEvent->code == Keyboard::Key::End) {
+                } else if (event.key.code == sf::Keyboard::End) {
                     // Move to end of line
                     if (shiftPressed && !hasSelection()) {
                         selectionStart = cursorPos;
@@ -734,7 +735,7 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
                     }
                     preferredColumn = 0;
                     updateCodeDisplay();
-                } else if (keyEvent->code == Keyboard::Key::Tab) {
+                } else if (event.key.code == sf::Keyboard::Tab) {
                     // Insert 4 spaces for tab
                     if (hasSelection()) {
                         deleteSelection();
@@ -743,7 +744,7 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
                     cursorPos += 4;
                     clearSelection();
                     updateCodeDisplay();
-                } else if (keyEvent->code == Keyboard::Key::Delete) {
+                } else if (event.key.code == sf::Keyboard::Delete) {
                     // Delete key
                     if (hasSelection()) {
                         deleteSelection();

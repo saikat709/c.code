@@ -1,6 +1,11 @@
 #pragma once
-#include <winsock2.h>
-#include <ws2tcpip.h>
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+
 #include <string>
 #include <iostream>
 #include <thread>
@@ -9,7 +14,7 @@
 #pragma comment(lib, "Ws2_32.lib")
 
 class Server {
-    SOCKET serverSocket;
+    int serverSocket;
     struct sockaddr_in serverAddr;
     bool isRunning;
 
@@ -18,5 +23,5 @@ public:
     ~Server();
     bool start(int port);
     void listenForConnections();
-    void handleClient(SOCKET clientSocket);
+    void handleClient(int clientSocket);
 };

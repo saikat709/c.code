@@ -5,7 +5,7 @@ using namespace sf;
 
 // --- InputField ---
 InputField::InputField(const Font& font, const string& placeholder, Vector2f pos, Vector2f size, bool password) 
-    : text(font, "", 18), placeholderText(font, placeholder, 18), isPassword(password) {
+    : text("", font, 18), placeholderText(placeholder,  font, 18), isPassword(password) {
     box.setPosition(pos);
     box.setSize(size);
     box.setFillColor(baseColor);
@@ -20,7 +20,7 @@ InputField::InputField(const Font& font, const string& placeholder, Vector2f pos
 }
 
 void InputField::handleEvent(const Event& event, const RenderWindow& window) {
-    if (event.is<Event::MouseButtonPressed>()) {
+    if (event.type == sf::Event::MouseButtonPressed) {
         auto mouse = Mouse::getPosition(window);
         Vector2f mousePos(static_cast<float>(mouse.x), static_cast<float>(mouse.y));
         isFocused = box.getGlobalBounds().contains(mousePos);
@@ -29,11 +29,11 @@ void InputField::handleEvent(const Event& event, const RenderWindow& window) {
     }
 
     if (isFocused) {
-        if (const auto* textEvent = event.getIf<Event::TextEntered>()) {
-            if (textEvent->unicode == 8) { // Backspace
+        if (event.type == sf::Event::TextEntered) {
+            if (event.text.unicode == 8) { // Backspace
                 if (!content.empty()) content.pop_back();
-            } else if (textEvent->unicode < 128 && textEvent->unicode >= 32) {
-                content += static_cast<char>(textEvent->unicode);
+            } else if (event.text.unicode < 128 && event.text.unicode >= 32) {
+                content += static_cast<char>(event.text.unicode);
             }
         }
     }
@@ -66,15 +66,15 @@ FloatRect InputField::getBounds() const { return box.getGlobalBounds(); }
 // --- Button ---
 
 Button::Button(const Font& font, const string& text, Vector2f pos, Vector2f size) 
-    : label(font, text, 20) {
+    : label(text, font, 20) {
     shape.setPosition(pos);
     shape.setSize(size);
     shape.setFillColor(idleColor);
 
     // Center text
     FloatRect textBounds = label.getLocalBounds();
-    label.setOrigin({textBounds.position.x + textBounds.size.x / 2.0f,
-                    textBounds.position.y + textBounds.size.y / 2.0f});
+    label.setOrigin({textBounds.getPosition().x + textBounds.getSize().x / 2.0f,
+                    textBounds.getPosition().y + textBounds.getSize().y / 2.0f});
     label.setPosition({pos.x + size.x / 2.0f, pos.y + size.y / 2.0f});
     label.setFillColor(Color::White);
 }
@@ -94,7 +94,7 @@ bool Button::update(const RenderWindow& window) {
 }
 
 bool Button::isClicked(const Event& event, const RenderWindow& window) {
-    if (event.is<Event::MouseButtonPressed>()) {
+    if (event.type == sf::Event::MouseButtonPressed) {
             auto mouse = Mouse::getPosition(window);
             Vector2f mousePos(static_cast<float>(mouse.x), static_cast<float>(mouse.y));
             if (shape.getGlobalBounds().contains(mousePos)) return true;

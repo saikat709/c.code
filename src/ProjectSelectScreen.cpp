@@ -9,20 +9,20 @@ ProjectSelectScreen::ProjectSelectScreen(Font& font, ParticleSystem& particles, 
       newProjectNameField(font, "Project Name", {200, 120}, {300, 40}),
       createProjectBtn(font, "Create New", {520, 120}, {150, 40}),
       openFriendsBtn(font, "Open Friends Project", {windowSize.x / 2.0f - 125, windowSize.y - 60.0f}, {250, 30}),
-      statusMsg(font, "", 16),
-      title(font, "Select Project to Open", 32),
-      yourProjectsLabel(font, "Your Projects", 24),
+      statusMsg("", font, 16),
+      title("Select Project to Open", font, 32),
+      yourProjectsLabel("Your Projects", font, 24),
       friendProjectIdField(font, "Project ID", {windowSize.x / 2.0f - 125, windowSize.y / 2.0f - 40}, {250, 40}),
       friendAccessKeyField(font, "Access Key", {windowSize.x / 2.0f - 125, windowSize.y / 2.0f + 20}, {250, 40}),
       friendEnterBtn(font, "Enter", {windowSize.x / 2.0f - 125, windowSize.y / 2.0f + 80}, {250, 40}),
       closePopupBtn(font, "Close", {windowSize.x / 2.0f - 125, windowSize.y / 2.0f + 130}, {250, 30}),
-      popupTitle(font, "Join Friend's Project", 24)
+      popupTitle("Join Friend's Project", font, 24)
 {
     // Title Setup
     title.setFillColor(Color::White);
     FloatRect titleBounds = title.getLocalBounds();
     // SFML 3: FloatRect has position and size
-    title.setOrigin({titleBounds.size.x / 2.0f, titleBounds.size.y / 2.0f});
+    title.setOrigin({titleBounds.getSize().x / 2.0f, titleBounds.getSize().y / 2.0f});
     title.setPosition({(float)windowSize.x / 2, 50});
 
     // Your Projects Label
@@ -47,7 +47,7 @@ ProjectSelectScreen::ProjectSelectScreen(Font& font, ParticleSystem& particles, 
     popupCard.setOutlineColor(Color(255, 255, 255, 50));
 
     FloatRect ptBounds = popupTitle.getLocalBounds();
-    popupTitle.setOrigin({ptBounds.size.x / 2.0f, ptBounds.size.y / 2.0f});
+    popupTitle.setOrigin({ptBounds.getSize().x / 2.0f, ptBounds.getSize().y / 2.0f});
     popupTitle.setPosition({(float)windowSize.x / 2, (float)windowSize.y / 2 - 120});
     popupTitle.setFillColor(Color::White);
 
@@ -59,26 +59,27 @@ AppState ProjectSelectScreen::run(RenderWindow& window) {
     while (window.isOpen()) {
         Vector2i mousePos = Mouse::getPosition(window);
 
-        while (const auto event = window.pollEvent()) {
-            if (event->is<Event::Closed>())
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed)
                 return AppState::EXIT;
 
             if (showFriendPopup) {
-                friendProjectIdField.handleEvent(*event, window);
-                friendAccessKeyField.handleEvent(*event, window);
+                friendProjectIdField.handleEvent(event, window);
+                friendAccessKeyField.handleEvent(event, window);
                 
-                if (friendEnterBtn.isClicked(*event, window)) {
+                if (friendEnterBtn.isClicked(event, window)) {
                     // Handle joining friend's project
                     cout << "Joining project: " << friendProjectIdField.getString() << endl;
                     showFriendPopup = false; // Close for now
                 }
-                if (closePopupBtn.isClicked(*event, window)) {
+                if (closePopupBtn.isClicked(event, window)) {
                     showFriendPopup = false;
                 }
             } else {
-                newProjectNameField.handleEvent(*event, window);
+                newProjectNameField.handleEvent(event, window);
 
-                if (createProjectBtn.isClicked(*event, window)) {
+                if (createProjectBtn.isClicked(event, window)) {
                     string name = newProjectNameField.getString();
                     if (!name.empty()) {
                         // Create new project logic
@@ -89,13 +90,13 @@ AppState ProjectSelectScreen::run(RenderWindow& window) {
                     }
                 }
 
-                if (openFriendsBtn.isClicked(*event, window)) {
+                if (openFriendsBtn.isClicked(event, window)) {
                     showFriendPopup = true;
                 }
 
                 // Handle Project List Clicks
-                if (const auto* mouseBtn = event->getIf<Event::MouseButtonPressed>()) {
-                    if (mouseBtn->button == Mouse::Button::Left) {
+                if (event.type == sf::Event::MouseButtonPressed) {
+                    if (event.mouseButton.button == sf::Mouse::Button::Left) {
                         for (const auto& proj : projects) {
                             // SFML 3 contains takes Vector2f
                             if (proj.bounds.contains({(float)mousePos.x, (float)mousePos.y})) {
@@ -146,20 +147,20 @@ AppState ProjectSelectScreen::run(RenderWindow& window) {
         // Draw Project List
         window.draw(yourProjectsLabel);
         for (const auto& proj : projects) {
-            RectangleShape itemShape({proj.bounds.size.x, proj.bounds.size.y});
-            itemShape.setPosition({proj.bounds.position.x, proj.bounds.position.y});
+            RectangleShape itemShape({proj.bounds.getSize().x, proj.bounds.getSize().y});
+            itemShape.setPosition({proj.bounds.getPosition().x, proj.bounds.getPosition().y});
             itemShape.setFillColor(proj.isHovered ? Color(255, 255, 255, 20) : Color(255, 255, 255, 10));
             itemShape.setOutlineThickness(1);
             itemShape.setOutlineColor(Color(255, 255, 255, 30));
             window.draw(itemShape);
 
-            Text projName(font, proj.name, 20);
-            projName.setPosition({proj.bounds.position.x + 20, proj.bounds.position.y + 12});
+            Text projName(proj.name, font, 20);
+            projName.setPosition({proj.bounds.getPosition().x + 20, proj.bounds.getPosition().y + 12});
             projName.setFillColor(Color::White);
             window.draw(projName);
 
-            Text fileCount(font, to_string(proj.fileCount) + " files", 14);
-            fileCount.setPosition({proj.bounds.position.x + proj.bounds.size.x - 80, proj.bounds.position.y + 16});
+            Text fileCount(to_string(proj.fileCount) + " files", font, 14);
+            fileCount.setPosition({proj.bounds.getPosition().x + proj.bounds.getSize().x - 80, proj.bounds.getPosition().y + 16});
             fileCount.setFillColor(Color(200, 200, 200));
             window.draw(fileCount);
         }

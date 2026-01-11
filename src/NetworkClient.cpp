@@ -1,34 +1,36 @@
 #include "NetworkClient.hpp"
+#include <iostream>
 
 using namespace std;
 
-NetworkClient::NetworkClient() : clientSocket(INVALID_SOCKET), isConnected(false) {
-    WSADATA wsaData;
-    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        cerr << "WSAStartup failed" << endl;
-    }
+NetworkClient::NetworkClient() : clientSocket(-1), isConnected(false) {
+    printf("NetworkClient initialized\n");
 }
 
 NetworkClient::~NetworkClient() {
-    if (clientSocket != INVALID_SOCKET) closesocket(clientSocket);
-    WSACleanup();
+    if (clientSocket != -1) close(clientSocket); // use close() on Linux
 }
 
 bool NetworkClient::connectToServer(const string& ip, int port) {
     clientSocket = socket(AF_INET, SOCK_STREAM, 0);
-    if (clientSocket == INVALID_SOCKET) {
+    if (clientSocket == -1) {
         cerr << "Socket creation failed" << endl;
         return false;
     }
 
-    sockaddr_in serverAddr;
+    sockaddr_in serverAddr{};
     serverAddr.sin_family = AF_INET;
-    serverAddr.sin_addr.s_addr = inet_addr(ip.c_str());
     serverAddr.sin_port = htons(port);
 
-    if (connect(clientSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
+    if (inet_pton(AF_INET, ip.c_str(), &serverAddr.sin_addr) <= 0) {
+        cerr << "Invalid IP address" << endl;
+        close(clientSocket);
+        return false;
+    }
+
+    if (connect(clientSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) == -1) {
         cerr << "Connection failed" << endl;
-        closesocket(clientSocket);
+        close(clientSocket);
         return false;
     }
 
@@ -44,13 +46,13 @@ json NetworkClient::sendRequest(const json& request) {
     }
 
     string requestStr = request.dump();
-    if (send(clientSocket, requestStr.c_str(), requestStr.length(), 0) == SOCKET_ERROR) {
+    if (send(clientSocket, requestStr.c_str(), requestStr.size(), 0) == -1) {
         cerr << "Send failed" << endl;
         return {{"status", "error"}, {"message", "Send failed"}};
     }
 
     char buffer[4096];
-    int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
+    int bytesReceived = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
     if (bytesReceived > 0) {
         buffer[bytesReceived] = '\0';
         try {

@@ -1,7 +1,12 @@
 #pragma once
 
 #define NOMINMAX
-#include <winsock2.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+
 #include <string>
 #include <iostream>
 #include "json.hpp"
@@ -17,6 +22,6 @@ public:
     json sendRequest(const json& request);
 
 private:
-    SOCKET clientSocket;
+    int clientSocket;
     bool isConnected;
 };

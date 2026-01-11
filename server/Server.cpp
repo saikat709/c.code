@@ -1,39 +1,48 @@
 #include "Server.hpp"
 #include "json.hpp"
+#include <cerrno>
+#include <cstring>
 #include <iostream>
 
 using namespace std;
 using json = nlohmann::json;
 
-Server::Server() : serverSocket(INVALID_SOCKET), isRunning(false) {
-    WSADATA wsaData;
-    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        cerr << "WSAStartup failed" << endl;
-    }
+Server::Server() : serverSocket(-1), isRunning(false) {
 }
 
 Server::~Server() {
-    if (serverSocket != INVALID_SOCKET) closesocket(serverSocket);
-    WSACleanup();
+    if (serverSocket != -1) close(serverSocket);
 }
 
 bool Server::start(int port) {
     serverSocket = socket(AF_INET, SOCK_STREAM, 0);
-    if (serverSocket == INVALID_SOCKET) {
+    if (serverSocket == -1) {
         cerr << "Socket creation failed" << endl;
         return false;
     }
 
+    // Allow quick restart if the port is in TIME_WAIT
+    int opt = 1;
+    if (setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) {
+        cerr << "setsockopt(SO_REUSEADDR) failed: " << strerror(errno) << endl;
+        close(serverSocket);
+        serverSocket = -1;
+        return false;
+    }
+
+    std::memset(&serverAddr, 0, sizeof(serverAddr));
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_addr.s_addr = INADDR_ANY;
     serverAddr.sin_port = htons(port);
 
-    if (bind(serverSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
-        cerr << "Bind failed with error: " << WSAGetLastError() << endl;
+    if (bind(serverSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) == -1) {
+        cerr << "Bind failed: " << strerror(errno) << endl;
+        close(serverSocket);
+        serverSocket = -1;
         return false;
     }
 
-    if (listen(serverSocket, SOMAXCONN) == SOCKET_ERROR) {
+    if (listen(serverSocket, SOMAXCONN) == -1) {
         cerr << "Listen failed" << endl;
         return false;
     }
@@ -48,8 +57,8 @@ bool Server::start(int port) {
 
 void Server::listenForConnections() {
     while (isRunning) {
-        SOCKET clientSocket = accept(serverSocket, NULL, NULL);
-        if (clientSocket == INVALID_SOCKET) {
+        int clientSocket = accept(serverSocket, NULL, NULL);
+        if (clientSocket == -1) {
             if (isRunning) cerr << "Accept failed" << endl;
             continue;
         }
@@ -59,13 +68,13 @@ void Server::listenForConnections() {
     }
 }
 
-void Server::handleClient(SOCKET clientSocket) {
+void Server::handleClient(int clientSocket) {
     char buffer[4096];
     while (true) {
         int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
         if (bytesReceived <= 0) {
             cout << "Client disconnected" << endl;
-            closesocket(clientSocket);
+            close(clientSocket);
             break;
         }
         

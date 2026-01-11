@@ -6,8 +6,8 @@ mkdir -p bin
 # Compilation settings
 CXX=g++
 CXXFLAGS="-std=c++23 -Wall -Wextra"
-INCLUDES="-Iinclude -Iinclude\\src"
-LIBS="-lsfml-graphics -lsfml-window -lsfml-system -lws2_32"
+INCLUDES="-Iinclude -Iinclude/src"
+LIBS="-lsfml-graphics -lsfml-window -lsfml-system"
 
 # Output file
 OUTPUT="bin/C.Code.exe"

@@ -7,6 +7,14 @@
     pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-sfml mingw-w64-x86_64-nlohmann-json mingw-w64-x86_64-sqlite3
     ```
 
+## For linux
+    ```bash
+    sudo apt update
+    sudo apt install libsfml-dev
+    sudo apt install nlohmann-json3-dev
+    sudo apt install libsqlite3-dev
+    ``
+
 ## Setup
 1.  **Clone/Open**: Open this folder in VS Code.
 2.  **Build**: Open the integrated terminal (Git Bash or MSYS2) and run:
@@ -14,6 +22,7 @@
     ./run.sh    # For Client
     ./server.sh # For Server
     ```
+
 
 ## Run
 - **Client**: `./bin/C.Code.exe`

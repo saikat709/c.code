@@ -21,14 +21,18 @@ int main() {
     RenderWindow window(VideoMode({(unsigned int)WIDTH, (unsigned int)HEIGHT}), "C.CODE", Style::Titlebar | Style::Close | Style::Resize);
     window.setFramerateLimit(60);
 
-    Font font;
-    if (!font.openFromFile("C:/Windows/Fonts/segoeui.ttf")) {
-        if (!font.openFromFile("C:/Windows/Fonts/arial.ttf")) return 1;
+    sf::Font font;
+    // Try common Linux fonts
+    if (!font.loadFromFile("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")) {
+        if (!font.loadFromFile("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf")) {
+            std::cerr << "Failed to load font" << std::endl;
+            return 1;
+        }
     }
 
     // Network Client
     NetworkClient networkClient;
-    if (!networkClient.connectToServer("127.0.0.1", 8080)) {
+    if (!networkClient.connectToServer("127.0.0.1", 8081)) {
         cerr << "Failed to connect to server. Running in offline mode (or exiting?)" << endl;
         // For now, we might want to continue or exit. Let's continue but logging will fail.
     }

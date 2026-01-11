@@ -13,8 +13,8 @@ RegisterScreen::RegisterScreen(Font& font, ParticleSystem& particles, Vector2u w
       confirmPassField(font, "Confirm Password", {275, 320}, {250, 40}, true),
       registerBtn(font, "REGISTER", {275, 390}, {250, 45}),
       backBtn(font, "Back to Login", {275, 450}, {250, 30}),
-      statusMsg(font, "", 16),
-      title(font, "Create Account", 32)
+      statusMsg("", font, 16),
+      title("Create Account", font, 32)
 {
     // Setup Card
     card.setSize({350, 500});
@@ -26,7 +26,7 @@ RegisterScreen::RegisterScreen(Font& font, ParticleSystem& particles, Vector2u w
 
     title.setFillColor(Color::White);
     FloatRect titleBounds = title.getLocalBounds();
-    title.setOrigin({titleBounds.position.x + titleBounds.size.x / 2.0f, titleBounds.position.y + titleBounds.size.y / 2.0f});
+    title.setOrigin({titleBounds.getPosition().x + titleBounds.getSize().x / 2.0f, titleBounds.getPosition().y + titleBounds.getSize().y / 2.0f});
     title.setPosition({(float)windowSize.x / 2, 120});
 
     statusMsg.setFillColor(Color::Red);
@@ -35,16 +35,17 @@ RegisterScreen::RegisterScreen(Font& font, ParticleSystem& particles, Vector2u w
 
 AppState RegisterScreen::run(RenderWindow& window) {
     while (window.isOpen()) {
-        while (const auto event = window.pollEvent()) {
-            if (event->is<Event::Closed>())
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed)
                 return AppState::EXIT;
             
-            userField.handleEvent(*event, window);
-            passField.handleEvent(*event, window);
-            confirmPassField.handleEvent(*event, window);
+            userField.handleEvent(event, window);
+            passField.handleEvent(event, window);
+            confirmPassField.handleEvent(event, window);
 
-            if (const auto* keyEvent = event->getIf<Event::KeyPressed>()) {
-                if (keyEvent->code == Keyboard::Key::Tab) {
+            if (event.type == sf::Event::KeyPressed) {
+                if (event.key.code == sf::Keyboard::Tab) {
                     if (userField.getFocused()) {
                         userField.setFocused(false); passField.setFocused(true);
                     } else if (passField.getFocused()) {
@@ -55,7 +56,7 @@ AppState RegisterScreen::run(RenderWindow& window) {
                 }
             }
 
-            if (registerBtn.isClicked(*event, window)) {
+            if (registerBtn.isClicked(event, window)) {
                 if (userField.getString().empty() || passField.getString().empty()) {
                     statusMsg.setString("Fields cannot be empty");
                     statusMsg.setFillColor(Color::Red);
@@ -83,7 +84,7 @@ AppState RegisterScreen::run(RenderWindow& window) {
                 }
             }
 
-            if (backBtn.isClicked(*event, window)) {
+            if (backBtn.isClicked(event, window)) {
                 return AppState::LOGIN;
             }
         }
