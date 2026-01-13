@@ -5,13 +5,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-
-#include <string>
-#include <iostream>
 #include <thread>
-#include <vector>
 
-#pragma comment(lib, "Ws2_32.lib")
 
 class Server {
     int serverSocket;

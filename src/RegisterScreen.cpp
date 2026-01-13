@@ -4,7 +4,6 @@
 
 using namespace std;
 using namespace sf;
-using json = nlohmann::json;
 
 RegisterScreen::RegisterScreen(Font& font, ParticleSystem& particles, Vector2u windowSize, NetworkClient& networkClient)
     : font(font), particles(particles), networkClient(networkClient),

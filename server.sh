@@ -1,9 +1,10 @@
 #!/bin/bash
 mkdir -p bin
-g++ -std=c++23 -Iinclude -Iinclude/server server/* -o bin/Server.exe -lsqlite3
+g++ -std=c++23 -Iinclude -Iinclude/server server/* -o bin/server -lsqlite3
+
 if [ $? -eq 0 ]; then
     echo "Compilation successful! Running application..."
-    ./bin/Server.exe
+    ./bin/server
 else
     echo "Compilation failed."
     exit 1

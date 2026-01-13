@@ -8,22 +8,25 @@
     ```
 
 ## For linux
+
+Packages for linux ( with install commands ):
+    
     ```bash
     sudo apt update
     sudo apt install libsfml-dev
     sudo apt install nlohmann-json3-dev
     sudo apt install libsqlite3-dev
-    ``
+    ``` 
 
 ## Setup
 1.  **Clone/Open**: Open this folder in VS Code.
 2.  **Build**: Open the integrated terminal (Git Bash or MSYS2) and run:
     ```bash
-    ./run.sh    # For Client
-    ./server.sh # For Server
+    ./run.sh    # Client
+    ./server.sh # Server
     ```
 
 
 ## Run
-- **Client**: `./bin/C.Code.exe`
-- **Server**: `./bin/server.exe`
+- **Client**: `./bin/c.code`
+- **Server**: `./bin/server`

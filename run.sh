@@ -5,12 +5,12 @@ mkdir -p bin
 
 # Compilation settings
 CXX=g++
-CXXFLAGS="-std=c++23 -Wall -Wextra"
+CXXFLAGS="-std=c++23 -w -Wall -Wextra"
 INCLUDES="-Iinclude -Iinclude/src"
 LIBS="-lsfml-graphics -lsfml-window -lsfml-system"
 
 # Output file
-OUTPUT="bin/C.Code.exe"
+OUTPUT="bin/c.code"
 
 # Source files
 SOURCES="src/* lib/*"

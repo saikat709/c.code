@@ -46,7 +46,7 @@ int main() {
     CodeEditorScreen codeEditorScreen(font, particles, {(unsigned int)WIDTH, (unsigned int)HEIGHT});
     ProjectSelectScreen projectSelectScreen(font, particles, {(unsigned int)WIDTH, (unsigned int)HEIGHT});
 
-    AppState currentState = AppState::PROJECT_SELECT;
+    AppState currentState = AppState::LOGIN;
 
     // Background gradient (shared)
     VertexArray gradient(PrimitiveType::TriangleStrip, 4);

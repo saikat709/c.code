@@ -5,7 +5,6 @@
 
 using namespace std;
 using namespace sf;
-using json = nlohmann::json;
 
 LoginScreen::LoginScreen(Font& font, ParticleSystem& particles, Vector2u windowSize, NetworkClient& networkClient)
     : font(font), particles(particles), networkClient(networkClient),
@@ -34,9 +33,9 @@ LoginScreen::LoginScreen(Font& font, ParticleSystem& particles, Vector2u windowS
 
 AppState LoginScreen::run(RenderWindow& window) {
     while (window.isOpen()) {
-        sf::Event event;
+        Event event;
         while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed)
+            if (event.type == Event::Closed)
                 return AppState::EXIT;
             
             userField.handleEvent(event, window);

@@ -3,12 +3,9 @@
 #include <cerrno>
 #include <cstring>
 #include <iostream>
-
 using namespace std;
-using json = nlohmann::json;
 
-Server::Server() : serverSocket(-1), isRunning(false) {
-}
+Server::Server() : serverSocket(-1), isRunning(false) { }
 
 Server::~Server() {
     if (serverSocket != -1) close(serverSocket);
