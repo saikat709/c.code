@@ -1,15 +1,14 @@
-#include "huffman.hpp"
+#include <iostream>
 #include <queue>
 #include <unordered_map>
 #include <vector>
 #include <string>
-#include <cstring>
 #include <cstdint>
+#include <cstring>
 #include <algorithm>
 
 using namespace std;
 
-namespace {
 struct Node {
     char ch;
     int freq;
@@ -27,7 +26,9 @@ struct Cmp {
 
 Node* buildTree(const unordered_map<char,int>& freq) {
     priority_queue<Node*, vector<Node*>, Cmp> pq;
+
     for (auto& p : freq) pq.push(new Node(p.first, p.second));
+
     while (pq.size() > 1) {
         Node* l = pq.top(); pq.pop();
         Node* r = pq.top(); pq.pop();
@@ -92,15 +93,18 @@ string decode(Node* root, const string& bits) {
 }
 
 string buildPayload(const unordered_map<char,int>& freq, int bitLen,
-                        const vector<uint8_t>& compressed) {
+                    const vector<uint8_t>& compressed) {
     string payload;
     auto putInt = [&](int x){ 
         payload.append(reinterpret_cast<const char*>(&x), sizeof(int)); 
     };
     int freqCount = freq.size();
     putInt(freqCount);
+    
+    // Sort entries to ensure deterministic order
     vector<pair<char, int>> sortedFreq(freq.begin(), freq.end());
     sort(sortedFreq.begin(), sortedFreq.end());
+    
     for (auto& p : sortedFreq) { 
         payload.push_back(p.first); 
         putInt(p.second); 
@@ -135,27 +139,73 @@ void parsePayload(
     getInt(byteCount);
     compressed = vector<uint8_t>(payload.begin() + idx, payload.begin() + idx + byteCount);
 }
-} // end anonymous namespace
 
-string Huffman::compress(const string& input) {
+// Compress function
+string compress(const string& input) {
+    // Build frequency table
     unordered_map<char,int> freq;
     for (char c : input) freq[c]++;
+
+    // Build Huffman tree & codes
     Node* root = buildTree(freq);
     unordered_map<char,string> codes;
     buildCodes(root, "", codes);
+
+    // Encode input
     string bits;
     for (char c : input) bits += codes[c];
     int bitLen;
     vector<uint8_t> compressed = packBits(bits, bitLen);
+
+    // Build payload string (ready to send)
     return buildPayload(freq, bitLen, compressed);
 }
 
-string Huffman::decompress(const string& compressedData) {
+// Decompress function
+string decompress(const string& compressedData) {
+    // Parse payload
     unordered_map<char,int> freq;
     int bitLen;
     vector<uint8_t> compressed;
     parsePayload(compressedData, freq, bitLen, compressed);
+
+    // Rebuild tree and decode
     Node* root = buildTree(freq);
     string unpackedBits = unpackBits(compressed, bitLen);
     return decode(root, unpackedBits);
+}
+
+int main() {
+    string input = "{\"action\":\"login\",\"password\":\"\",\"username\":\"\"}";
+    
+    cout << "=== Huffman Compression Test ===" << endl;
+    cout << "Original message: " << input << endl;
+    cout << "Original size: " << input.size() << " bytes" << endl;
+    cout << endl;
+
+    // Compress
+    string compressed = compress(input);
+    cout << "Compressed data (hex): ";
+    for (size_t i = 0; i < min(compressed.size(), (size_t)50); i++) {
+        printf("%02x ", (unsigned char)compressed[i]);
+    }
+    if (compressed.size() > 50) cout << "...";
+    cout << endl;
+    cout << "Compressed size: " << compressed.size() << " bytes" << endl;
+    cout << "Compression ratio: " << (100.0 * compressed.size() / input.size()) << "%" << endl;
+    cout << endl;
+
+    // Decompress
+    string decompressed = decompress(compressed);
+    cout << "Decompressed message: " << decompressed << endl;
+    cout << endl;
+
+    // Verify
+    if (input == decompressed) {
+        cout << "✓ SUCCESS: Decompressed message matches original!" << endl;
+    } else {
+        cout << "✗ ERROR: Decompressed message does NOT match original!" << endl;
+    }
+
+    return 0;
 }

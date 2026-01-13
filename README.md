@@ -1,4 +1,4 @@
-# C.CODE
+# C.CODE - Collaborative Code.
 
 ## Install
 1.  **Install MSYS2**: Download and install from [msys2.org](https://www.msys2.org/).

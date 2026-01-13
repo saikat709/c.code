@@ -3,6 +3,7 @@
 #include <cerrno>
 #include <cstring>
 #include <iostream>
+#include "huffman.hpp"
 using namespace std;
 
 Server::Server() : serverSocket(-1), isRunning(false) { }
@@ -27,7 +28,7 @@ bool Server::start(int port) {
         return false;
     }
 
-    std::memset(&serverAddr, 0, sizeof(serverAddr));
+    memset(&serverAddr, 0, sizeof(serverAddr));
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_addr.s_addr = INADDR_ANY;
     serverAddr.sin_port = htons(port);
@@ -66,7 +67,7 @@ void Server::listenForConnections() {
 }
 
 void Server::handleClient(int clientSocket) {
-    char buffer[4096];
+    char buffer[16096];
     while (true) {
         int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
         if (bytesReceived <= 0) {
@@ -80,7 +81,11 @@ void Server::handleClient(int clientSocket) {
         cout << "Received: " << receivedData << endl;
         
         try {
-            json request = json::parse(receivedData);
+            cout << "Received data: " << receivedData << endl;
+            string decompressedData = Huffman::decompress(receivedData);
+            cout << "Decompressed data: " << decompressedData << endl;
+            json request = json::parse(decompressedData);
+            cout << "Parsed JSON request: " << request.dump() << endl;
             string action = request["action"];
             json response;
 

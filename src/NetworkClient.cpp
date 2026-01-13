@@ -1,5 +1,7 @@
 #include "NetworkClient.hpp"
 #include <iostream>
+#include "json.hpp"
+#include "huffman.hpp"
 
 using namespace std;
 
@@ -45,13 +47,16 @@ json NetworkClient::sendRequest(const json& request) {
         return {{"status", "error"}, {"message", "Not connected"}};
     }
 
-    string requestStr = request.dump();
+    string requestData = request.dump();
+    cout << "Sending request: " << requestData << endl;
+    string requestStr = Huffman::compress(requestData);
+    cout << "Compressed request: " << requestStr << endl;
     if (send(clientSocket, requestStr.c_str(), requestStr.size(), 0) == -1) {
         cerr << "Send failed" << endl;
         return {{"status", "error"}, {"message", "Send failed"}};
     }
 
-    char buffer[4096];
+    char buffer[16096];
     int bytesReceived = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
     if (bytesReceived > 0) {
         buffer[bytesReceived] = '\0';
