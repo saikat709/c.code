@@ -1,8 +1,8 @@
 #pragma once
 #include <sqlite3.h>
 #include <string>
-#include <vector>
-#include <iostream>
+#include <json.hpp>
+using namespace std;
 
 class Database {
     sqlite3* db;
@@ -12,5 +12,9 @@ public:
     Database();
     ~Database();
     bool connect();
-    bool executeQuery(const std::string& query);
+    bool executeQuery(const string& query);
+    json fetchAsJson(const string& query);
+    bool createDbTablesIfNotExists();
+    
+    void checkMutationQueries();
 };

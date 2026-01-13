@@ -6,7 +6,7 @@ mkdir -p bin
 # Compilation settings
 CXX=g++
 CXXFLAGS="-std=c++23 -w -Wall -Wextra"
-INCLUDES="-Iinclude -Iinclude/src"
+INCLUDES="-Iinclude -Iinclude/src -Ilib"
 LIBS="-lsfml-graphics -lsfml-window -lsfml-system"
 
 # Output file
