@@ -4,6 +4,7 @@
 #include <cstring>
 #include <iostream>
 #include "huffman.hpp"
+#include "actions.hpp"
 using namespace std;
 
 Server::Server() : serverSocket(-1), isRunning(false) { }
@@ -67,7 +68,7 @@ void Server::listenForConnections() {
 }
 
 void Server::handleClient(int clientSocket) {
-    char buffer[16096];
+    char buffer[4096];
     while (true) {
         int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
         if (bytesReceived <= 0) {
@@ -75,14 +76,15 @@ void Server::handleClient(int clientSocket) {
             close(clientSocket);
             break;
         }
-        
+
         buffer[bytesReceived] = '\0';
         string receivedData(buffer);
+        cout << "Length: " << receivedData.size() << endl;
         cout << "Received: " << receivedData << endl;
-        
+        Huffman huffman;
+
         try {
-            cout << "Received data: " << receivedData << endl;
-            string decompressedData = Huffman::decompress(receivedData);
+            string decompressedData = huffman.decompress(receivedData);
             cout << "Decompressed data: " << decompressedData << endl;
             json request = json::parse(decompressedData);
             cout << "Parsed JSON request: " << request.dump() << endl;
@@ -93,7 +95,6 @@ void Server::handleClient(int clientSocket) {
                 string username = request["username"];
                 string password = request["password"];
                 cout << "Action: Login, Username: " << username << endl;
-                
                 // TODO: Validate against database
                 if (username == "admin" && password == "admin") {
                     response["status"] = "success";
@@ -117,13 +118,16 @@ void Server::handleClient(int clientSocket) {
             }
 
             string responseStr = response.dump();
-            send(clientSocket, responseStr.c_str(), responseStr.length(), 0);
-            cout << "Sent: " << responseStr << endl;
+            cout << "Response JSON: " << responseStr << endl;
+            string compressedResponse = huffman.compress(responseStr);
+            send(clientSocket, compressedResponse.c_str(), compressedResponse.length(), 0);
+            cout << "Sent: " << compressedResponse << endl;
 
         } catch (const json::parse_error& e) {
             cerr << "JSON Parse Error: " << e.what() << endl;
             string errorMsg = "{\"status\":\"error\",\"message\":\"Invalid JSON\"}";
-            send(clientSocket, errorMsg.c_str(), errorMsg.length(), 0);
+            string compressedErrorMsg = huffman.compress(errorMsg);
+            send(clientSocket, compressedErrorMsg.c_str(), compressedErrorMsg.length(), 0);
         } catch (const exception& e) {
             cerr << "Error: " << e.what() << endl;
         }

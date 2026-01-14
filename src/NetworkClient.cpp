@@ -1,5 +1,5 @@
-#include "NetworkClient.hpp"
 #include <iostream>
+#include "NetworkClient.hpp"
 #include "json.hpp"
 #include "huffman.hpp"
 
@@ -10,7 +10,7 @@ NetworkClient::NetworkClient() : clientSocket(-1), isConnected(false) {
 }
 
 NetworkClient::~NetworkClient() {
-    if (clientSocket != -1) close(clientSocket); // use close() on Linux
+    if (clientSocket != -1) close(clientSocket);
 }
 
 bool NetworkClient::connectToServer(const string& ip, int port) {
@@ -49,19 +49,23 @@ json NetworkClient::sendRequest(const json& request) {
 
     string requestData = request.dump();
     cout << "Sending request: " << requestData << endl;
-    string requestStr = Huffman::compress(requestData);
+    Huffman huffman;
+    string requestStr = huffman.compress(requestData);
     cout << "Compressed request: " << requestStr << endl;
     if (send(clientSocket, requestStr.c_str(), requestStr.size(), 0) == -1) {
         cerr << "Send failed" << endl;
         return {{"status", "error"}, {"message", "Send failed"}};
     }
 
-    char buffer[16096];
-    int bytesReceived = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
+    char buffer[4096];
+    int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
     if (bytesReceived > 0) {
         buffer[bytesReceived] = '\0';
         try {
-            return json::parse(buffer);
+            string responseStr(buffer);
+            cout << "Received response: " << responseStr << endl;
+            string decompressedResponse = huffman.decompress(responseStr);
+            return json::parse(decompressedResponse);
         } catch (const json::parse_error& e) {
             cerr << "JSON Parse Error: " << e.what() << endl;
             return {{"status", "error"}, {"message", "Invalid JSON response"}};

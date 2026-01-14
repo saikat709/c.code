@@ -1,10 +1,10 @@
-#include "CodeEditorScreen.hpp"
 #include <SFML/Graphics.hpp>
 #include <sstream>
 #include <fstream>
 #include <cstdlib>
 #include <array>
 #include <memory>
+#include "CodeEditorScreen.hpp"
 #include "UI.hpp"
 
 using namespace std;
@@ -145,9 +145,9 @@ void CodeEditorScreen::executeCode() {
     string compileOutput;
     
     #ifdef _WIN32
-    unique_ptr<FILE, decltype(&_pclose)> pipe(_popen(compileCmd.c_str(), "r"), _pclose);
+        unique_ptr<FILE, decltype(&_pclose)> pipe(_popen(compileCmd.c_str(), "r"), _pclose);
     #else
-    unique_ptr<FILE, decltype(&pclose)> pipe(popen(compileCmd.c_str(), "r"), pclose);
+        unique_ptr<FILE, decltype(&pclose)> pipe(popen(compileCmd.c_str(), "r"), pclose);
     #endif
     
     if (!pipe) {
