@@ -11,6 +11,8 @@ public:
     int id;
 
     User(const int& id, const string& uname, const string& pwd); 
+    int getId() const { return id; }
+    string getUsername() const { return username; }
     json toJson();
     static User fromJson(const json& j);
     void printInfo();

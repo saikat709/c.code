@@ -5,6 +5,7 @@
 #include "ParticleSystem.hpp"
 
 struct ProjectItem {
+    int id;
     std::string name;
     int fileCount;
     sf::FloatRect bounds;
@@ -38,8 +39,10 @@ class ProjectSelectScreen {
     InputField friendAccessKeyField;
     Button friendEnterBtn;
     Button closePopupBtn;
+    Button logoutBtn;
     
     sf::Text statusMsg;
+    void loadProjects();
 
 public:
     ProjectSelectScreen(sf::Font& font, ParticleSystem& particles, sf::Vector2u windowSize);

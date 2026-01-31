@@ -7,7 +7,7 @@
 #include "actions.hpp"
 using namespace std;
 
-Server::Server() : serverSocket(-1), isRunning(false) { }
+Server::Server(Database* database) : serverSocket(-1), isRunning(false), db(database) { }
 
 Server::~Server() {
     if (serverSocket != -1) close(serverSocket);
@@ -80,25 +80,23 @@ void Server::handleClient(int clientSocket) {
         buffer[bytesReceived] = '\0';
         string receivedData(buffer);
         cout << "Length: " << receivedData.size() << endl;
-        cout << "Received: " << receivedData << endl;
+        // cout << "Received: " << receivedData << endl;
         Huffman huffman;
 
         try {
             string decompressedData = huffman.decompress(receivedData);
-            cout << "Decompressed data: " << decompressedData << endl;
             json request = json::parse(decompressedData);
-            cout << "Parsed JSON request: " << request.dump() << endl;
             string action = request["action"];
             json response;
 
             if (action == "login") {
                 string username = request["username"];
                 string password = request["password"];
-                cout << "Action: Login, Username: " << username << endl;
-                // TODO: Validate against database
-                if (username == "admin" && password == "admin") {
+                if (DBActions::loginUser(*db, username, password)) {
+                    User user = DBActions::getUserByUsername(*db, username);
                     response["status"] = "success";
-                    response["message"] = "Login successful";
+                    response["user_id"] = user.getId();
+                    response["username"] = user.getUsername();
                 } else {
                     response["status"] = "error";
                     response["message"] = "Invalid credentials";
@@ -106,23 +104,85 @@ void Server::handleClient(int clientSocket) {
             } else if (action == "register") {
                 string username = request["username"];
                 string password = request["password"];
-                string email = request["email"];
-                cout << "Action: Register, Username: " << username << ", Email: " << email << endl;
-
-                // TODO: Save to database
+                if (DBActions::createUser(*db, username, password)) {
+                    response["status"] = "success";
+                } else {
+                    response["status"] = "error";
+                    response["message"] = "Registration failed (user might exist)";
+                }
+            } else if (action == "get_projects") {
+                int userId = request["user_id"];
                 response["status"] = "success";
-                response["message"] = "Registration successful";
+                response["projects"] = DBActions::getProjects(*db, userId);
+            } else if (action == "create_project") {
+                string name = request["name"];
+                int userId = request["user_id"];
+                if (DBActions::createProject(*db, name, userId)) {
+                    response["status"] = "success";
+                } else {
+                    response["status"] = "error";
+                }
+            } else if (action == "get_files") {
+                int projectId = request["project_id"];
+                response["status"] = "success";
+                response["files"] = DBActions::getFiles(*db, projectId);
+            } else if (action == "create_file") {
+                string name = request["name"];
+                int projectId = request["project_id"];
+                int fileId = DBActions::createFile(*db, name, projectId);
+                if (fileId != -1) {
+                    response["status"] = "success";
+                    response["file_id"] = fileId;
+                } else {
+                    response["status"] = "error";
+                }
+            } else if (action == "get_file_content") {
+                int fileId = request["file_id"];
+                response["status"] = "success";
+                response["content"] = DBActions::getFileContent(*db, fileId);
+            } else if (action == "save_file") {
+                int fileId = request["file_id"];
+                string content = request["content"];
+                if (DBActions::updateFileContent(*db, fileId, content)) {
+                    response["status"] = "success";
+                } else {
+                    response["status"] = "error";
+                }
+            } else if (action == "send_message") {
+                int projectId = request["project_id"];
+                string sender = request["sender"];
+                string message = request["message"];
+                if (DBActions::sendMessage(*db, projectId, sender, message)) {
+                    response["status"] = "success";
+                } else {
+                    response["status"] = "error";
+                }
+            } else if (action == "get_messages") {
+                int projectId = request["project_id"];
+                response["status"] = "success";
+                response["messages"] = DBActions::getMessages(*db, projectId);
+            } else if (action == "join_project") {
+                int userId = request["user_id"];
+                int projectId = request["project_id"];
+                int accessKey = request["access_key"];
+                if (DBActions::joinProject(*db, userId, projectId, accessKey)) {
+                    response["status"] = "success";
+                } else {
+                    response["status"] = "error";
+                    response["message"] = "Invalid ID or Access Key";
+                }
+            } else if (action == "get_project_info") {
+                int projectId = request["project_id"];
+                response["status"] = "success";
+                response["info"] = DBActions::getProjectAccessInfo(*db, projectId);
             } else {
                 response["status"] = "error";
-                response["message"] = "Unknown action";
+                response["message"] = "Unknown action " + action;
             }
 
             string responseStr = response.dump();
-            cout << "Response JSON: " << responseStr << endl;
             string compressedResponse = huffman.compress(responseStr);
             send(clientSocket, compressedResponse.c_str(), compressedResponse.length(), 0);
-            cout << "Sent: " << compressedResponse << endl;
-
         } catch (const json::parse_error& e) {
             cerr << "JSON Parse Error: " << e.what() << endl;
             string errorMsg = "{\"status\":\"error\",\"message\":\"Invalid JSON\"}";

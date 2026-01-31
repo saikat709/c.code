@@ -10,6 +10,7 @@
 #include "CodeEditorScreen.hpp"
 #include "ProjectSelectScreen.hpp"
 #include "AppState.hpp"
+#include "Session.hpp"
 
 using namespace std;
 using namespace sf;
@@ -33,9 +34,9 @@ int main() {
     // Network Client
     NetworkClient networkClient;
     if (!networkClient.connectToServer("127.0.0.1", 8081)) {
-        cerr << "Failed to connect to server. Running in offline mode (or exiting?)" << endl;
-        // For now, we might want to continue or exit. Let's continue but logging will fail.
+        cerr << "Failed to connect to server." << endl;
     }
+    Session::getInstance().setNetworkClient(&networkClient);
 
     // Shared
     ParticleSystem particles(50, {(unsigned int)WIDTH, (unsigned int)HEIGHT});
@@ -47,6 +48,10 @@ int main() {
     ProjectSelectScreen projectSelectScreen(font, particles, {(unsigned int)WIDTH, (unsigned int)HEIGHT});
 
     AppState currentState = AppState::LOGIN;
+    int lastStateInt = 0;
+    if (Session::getInstance().loadSession(lastStateInt)) {
+        currentState = static_cast<AppState>(lastStateInt);
+    }
 
     // Background gradient (shared)
     VertexArray gradient(PrimitiveType::TriangleStrip, 4);
@@ -64,6 +69,10 @@ int main() {
             currentState = codeEditorScreen.run(window);
         } else if (currentState == AppState::PROJECT_SELECT){
             currentState = projectSelectScreen.run(window);
+        }
+
+        if (currentState != AppState::EXIT) {
+            Session::getInstance().saveSession(static_cast<int>(currentState));
         }
     }
 

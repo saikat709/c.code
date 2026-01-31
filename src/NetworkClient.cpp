@@ -63,7 +63,7 @@ json NetworkClient::sendRequest(const json& request) {
         buffer[bytesReceived] = '\0';
         try {
             string responseStr(buffer);
-            cout << "Received response: " << responseStr << endl;
+            // cout << "Received response: " << responseStr << endl;
             string decompressedResponse = huffman.decompress(responseStr);
             return json::parse(decompressedResponse);
         } catch (const json::parse_error& e) {

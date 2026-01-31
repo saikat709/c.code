@@ -15,7 +15,7 @@ int main() {
         return 1;
     }
 
-    Server server;
+    Server server(&db);
     if (!server.start(8081)) {
         return 1;
     }

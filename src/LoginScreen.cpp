@@ -2,6 +2,7 @@
 #include "login.hpp"
 #include <iostream>
 #include "json.hpp"
+#include "Session.hpp"
 
 using namespace std;
 using namespace sf;
@@ -57,6 +58,8 @@ AppState LoginScreen::run(RenderWindow& window) {
                 json response = networkClient.sendRequest(request);
                 
                 if (response["status"] == "success") {
+                    Session::getInstance().setUserId(response["user_id"]);
+                    Session::getInstance().setUsername(response["username"]);
                     return AppState::PROJECT_SELECT;
                 } else {
                     string msg = response.value("message", "Login failed");

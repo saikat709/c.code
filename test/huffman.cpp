@@ -165,11 +165,11 @@ int main() {
     
     cout << "\nCompressed String Length: " << compressed.length() << " bits" << endl;
     
-    huff.printCodes();
+    // huff.printCodes();
     
     string decompressed = huff.decompress(compressed);
     
-    cout << "\nDecompressed Text: " << decompressed << endl;
+    // cout << "\nDecompressed Text: " << decompressed << endl;
     
     cout << "\n=== Verification ===" << endl;
     if (original == decompressed) {

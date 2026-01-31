@@ -67,7 +67,6 @@ AppState RegisterScreen::run(RenderWindow& window) {
                     request["action"] = "register";
                     request["username"] = userField.getString();
                     request["password"] = passField.getString();
-                    request["email"] = ""; // Add email field later if needed
 
                     json response = networkClient.sendRequest(request);
 

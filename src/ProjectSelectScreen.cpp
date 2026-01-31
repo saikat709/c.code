@@ -1,5 +1,7 @@
 #include "ProjectSelectScreen.hpp"
 #include <iostream>
+#include "Session.hpp"
+#include "json.hpp"
 
 using namespace std;
 using namespace sf;
@@ -14,28 +16,19 @@ ProjectSelectScreen::ProjectSelectScreen(Font& font, ParticleSystem& particles, 
       yourProjectsLabel("Your Projects", font, 24),
       friendProjectIdField(font, "Project ID", {windowSize.x / 2.0f - 125, windowSize.y / 2.0f - 40}, {250, 40}),
       friendAccessKeyField(font, "Access Key", {windowSize.x / 2.0f - 125, windowSize.y / 2.0f + 20}, {250, 40}),
-      friendEnterBtn(font, "Enter", {windowSize.x / 2.0f - 125, windowSize.y / 2.0f + 80}, {250, 40}),
-      closePopupBtn(font, "Close", {windowSize.x / 2.0f - 125, windowSize.y / 2.0f + 130}, {250, 30}),
+      friendEnterBtn(font, "Enter", {windowSize.x / 2.0f - 120, windowSize.y / 2.0f + 60}, {240, 40}),
+      closePopupBtn(font, "Close", {windowSize.x / 2.0f - 120, windowSize.y / 2.0f + 110}, {240, 30}),
+      logoutBtn(font, "Logout", {10, 5}, {80, 30}),
       popupTitle("Join Friend's Project", font, 24)
 {
-    // Title Setup
     title.setFillColor(Color::White);
     FloatRect titleBounds = title.getLocalBounds();
-    // SFML 3: FloatRect has position and size
     title.setOrigin({titleBounds.getSize().x / 2.0f, titleBounds.getSize().y / 2.0f});
     title.setPosition({(float)windowSize.x / 2, 50});
 
-    // Your Projects Label
     yourProjectsLabel.setFillColor(Color(200, 200, 200));
     yourProjectsLabel.setPosition({100, 180});
 
-    // Dummy Projects
-    // SFML 3 FloatRect constructor: {{x, y}, {w, h}} or (position, size)
-    projects.push_back({"My First Game", 12, {{100, 220}, {600, 50}}});
-    projects.push_back({"Chat App", 5, {{100, 280}, {600, 50}}});
-    projects.push_back({"Todo List", 3, {{100, 340}, {600, 50}}});
-
-    // Popup Setup
     popupOverlay.setSize({(float)windowSize.x, (float)windowSize.y});
     popupOverlay.setFillColor(Color(0, 0, 0, 150));
 
@@ -52,11 +45,38 @@ ProjectSelectScreen::ProjectSelectScreen(Font& font, ParticleSystem& particles, 
     popupTitle.setFillColor(Color::White);
 
     statusMsg.setFillColor(Color::Red);
-    statusMsg.setPosition({(float)windowSize.x / 2 - 100, (float)windowSize.y - 100});
+    statusMsg.setPosition({(float)windowSize.x / 2 - 100, (float)windowSize.y - 120});
+}
+
+void ProjectSelectScreen::loadProjects() {
+    json request;
+    request["action"] = "get_projects";
+    request["user_id"] = Session::getInstance().getUserId();
+    
+    json response = Session::getInstance().getNetworkClient()->sendRequest(request);
+    if (response["status"] == "success") {
+        projects.clear();
+        int i = 0;
+        for (auto& projJson : response["projects"]) {
+            ProjectItem item;
+            item.id = projJson["id"];
+            item.name = projJson["name"];
+            item.fileCount = projJson.value("fileCount", 0);
+            float yPos = 220 + i * 60;
+            item.bounds = {{100, yPos}, {600, 50}};
+            projects.push_back(item);
+            i++;
+        }
+    }
 }
 
 AppState ProjectSelectScreen::run(RenderWindow& window) {
+    bool projectsFetched = false;
     while (window.isOpen()) {
+        if (!projectsFetched) {
+            loadProjects();
+            projectsFetched = true;
+        }
         Vector2i mousePos = Mouse::getPosition(window);
 
         sf::Event event;
@@ -69,9 +89,25 @@ AppState ProjectSelectScreen::run(RenderWindow& window) {
                 friendAccessKeyField.handleEvent(event, window);
                 
                 if (friendEnterBtn.isClicked(event, window)) {
-                    // Handle joining friend's project
-                    cout << "Joining project: " << friendProjectIdField.getString() << endl;
-                    showFriendPopup = false; // Close for now
+                    string projIdStr = friendProjectIdField.getString();
+                    string accessKeyStr = friendAccessKeyField.getString();
+                    if (!projIdStr.empty() && !accessKeyStr.empty()) {
+                        json request;
+                        request["action"] = "join_project";
+                        request["project_id"] = stoi(projIdStr);
+                        request["access_key"] = stoi(accessKeyStr);
+                        request["user_id"] = Session::getInstance().getUserId();
+                        json response = Session::getInstance().getNetworkClient()->sendRequest(request);
+                        if (response["status"] == "success") {
+                            statusMsg.setString("Joined Project!");
+                            statusMsg.setFillColor(Color::Green);
+                            loadProjects();
+                            showFriendPopup = false;
+                        } else {
+                            statusMsg.setString(response.value("message", "Join Failed"));
+                            statusMsg.setFillColor(Color::Red);
+                        }
+                    }
                 }
                 if (closePopupBtn.isClicked(event, window)) {
                     showFriendPopup = false;
@@ -82,11 +118,19 @@ AppState ProjectSelectScreen::run(RenderWindow& window) {
                 if (createProjectBtn.isClicked(event, window)) {
                     string name = newProjectNameField.getString();
                     if (!name.empty()) {
-                        // Create new project logic
-                        float yPos = 220 + projects.size() * 60;
-                        projects.push_back({name, 0, {{100, yPos}, {600, 50}}});
-                        statusMsg.setString("Project Created!");
-                        statusMsg.setFillColor(Color::Green);
+                        json request;
+                        request["action"] = "create_project";
+                        request["name"] = name;
+                        request["user_id"] = Session::getInstance().getUserId();
+                        json response = Session::getInstance().getNetworkClient()->sendRequest(request);
+                        if (response["status"] == "success") {
+                            statusMsg.setString("Project Created!");
+                            statusMsg.setFillColor(Color::Green);
+                            loadProjects();
+                        } else {
+                            statusMsg.setString("Creation Failed");
+                            statusMsg.setFillColor(Color::Red);
+                        }
                     }
                 }
 
@@ -94,13 +138,16 @@ AppState ProjectSelectScreen::run(RenderWindow& window) {
                     showFriendPopup = true;
                 }
 
-                // Handle Project List Clicks
+                if (logoutBtn.isClicked(event, window)) {
+                    Session::getInstance().clearSession();
+                    return AppState::LOGIN;
+                }
+
                 if (event.type == sf::Event::MouseButtonPressed) {
                     if (event.mouseButton.button == sf::Mouse::Button::Left) {
                         for (const auto& proj : projects) {
-                            // SFML 3 contains takes Vector2f
                             if (proj.bounds.contains({(float)mousePos.x, (float)mousePos.y})) {
-                                cout << "Opening project: " << proj.name << endl;
+                                Session::getInstance().setCurrentProjectId(proj.id);
                                 return AppState::CODE_EDITOR;
                             }
                         }
@@ -116,6 +163,7 @@ AppState ProjectSelectScreen::run(RenderWindow& window) {
         } else {
             createProjectBtn.update(window);
             openFriendsBtn.update(window);
+            logoutBtn.update(window);
             
             // Update Hover State for Projects
             for (auto& proj : projects) {
@@ -166,6 +214,7 @@ AppState ProjectSelectScreen::run(RenderWindow& window) {
         }
 
         openFriendsBtn.draw(window);
+        logoutBtn.draw(window);
         window.draw(statusMsg);
 
         // Draw Popup

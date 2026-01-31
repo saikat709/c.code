@@ -28,6 +28,7 @@ bool Database::createDbTablesIfNotExists() {
                         "id INTEGER PRIMARY KEY AUTOINCREMENT,"
                         "name TEXT NOT NULL,"
                         "ownerId INTEGER NOT NULL,"
+                        "accessKey INTEGER,"
                         "FOREIGN KEY(ownerId) REFERENCES users(id));";
     bool projectTableCreated = executeQuery(projectSql);
     if (!projectTableCreated) {
@@ -44,6 +45,30 @@ bool Database::createDbTablesIfNotExists() {
     bool fileTableCreated = executeQuery(fileSql);  
     if (!fileTableCreated) {
         cerr << "Failed to create files table" << endl;
+        return false;
+    }
+
+    string messageTableCreatedSql = "CREATE TABLE IF NOT EXISTS messages ("
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                        "projectId INTEGER NOT NULL,"
+                        "sender TEXT NOT NULL,"
+                        "message TEXT NOT NULL,"
+                        "timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,"
+                        "FOREIGN KEY(projectId) REFERENCES projects(id));";
+    bool messageTableCreated = executeQuery(messageTableCreatedSql);
+    if (!messageTableCreated) {
+        cerr << "Failed to create messages table" << endl;
+        return false;
+    }
+
+    string membersSql = "CREATE TABLE IF NOT EXISTS project_members ("
+                        "userId INTEGER NOT NULL,"
+                        "projectId INTEGER NOT NULL,"
+                        "PRIMARY KEY(userId, projectId),"
+                        "FOREIGN KEY(userId) REFERENCES users(id),"
+                        "FOREIGN KEY(projectId) REFERENCES projects(id));";
+    if (!executeQuery(membersSql)) {
+        cerr << "Failed to create project_members table" << endl;
         return false;
     }
 

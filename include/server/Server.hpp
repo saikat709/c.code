@@ -12,9 +12,10 @@ class Server {
     int serverSocket;
     struct sockaddr_in serverAddr;
     bool isRunning;
+    class Database* db;
 
 public:
-    Server();
+    Server(class Database* db);
     ~Server();
     bool start(int port);
     void listenForConnections();

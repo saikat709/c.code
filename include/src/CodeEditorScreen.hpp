@@ -35,6 +35,19 @@ class CodeEditorScreen {
     bool isSelecting = false;
     int preferredColumn = 0;  // For up/down navigation
     
+    // Resizable panels state
+    float sidebarWidth = 200.0f;
+    float chatWidth = 160.0f;
+    float outputHeight = 280.0f;
+    
+    bool isResizingSidebar = false;
+    bool isResizingChat = false;
+    bool isResizingOutput = false;
+    
+    sf::RectangleShape sidebarHandle;
+    sf::RectangleShape chatHandle;
+    sf::RectangleShape outputHandle;
+
     // Scrolling
     int codeScrollOffset = 0;
     int outputScrollOffset = 0;
@@ -42,6 +55,7 @@ class CodeEditorScreen {
     // Sidebar components
     sf::RectangleShape sidebarBox;
     std::vector<std::string> fileList;
+    std::vector<int> fileIds;
     int selectedFileIndex = 0;
     Button newFileBtn;
     int sidebarScrollOffset = 0;
@@ -60,16 +74,46 @@ class CodeEditorScreen {
     Button viewMenuBtn;
     Button runMenuBtn;
     Button toggleOutputBtn;
+    Button chatBtn;  
+    Button shareBtn;
+    Button backBtn;
     Button logoutBtn;
     
     // Output panel toggle
     bool outputVisible = false;
+
+    // Chat Screen
+    bool chatVisible = false;
+    sf::RectangleShape chatBox;
+    sf::Text chatTitle;
+    std::vector<sf::Text> messageDisplay;
+    InputField chatInputField;
+    Button sendChatBtn;
+    void updateChatDisplay();
+    void loadMessages();
+    void sendMessage();
+    
+    // Share Popup
+    bool showSharePopup = false;
+    sf::RectangleShape popupOverlay;
+    sf::RectangleShape sharePopupCard;
+    sf::Text sharePopupTitle;
+    sf::Text sharePopupInfo;
+    Button closeShareBtn;
+
+    // Debounce Save
+    sf::Clock lastEditClock;
+    bool needsSave = false;
+    int currentFileId = -1;
+    void saveFile();
     
     // Helper methods
     void executeCode();
     void updateCodeDisplay();
     void updateOutputDisplay();
     std::vector<std::string> splitLines(const std::string& text);
+    void loadFiles();
+    void fetchFileContent(int fileId);
     
     // Cursor and selection helpers
     size_t getCursorPosFromClick(sf::Vector2f mousePos);
@@ -85,7 +129,7 @@ class CodeEditorScreen {
     void drawSidebar(sf::RenderWindow& window);
     void drawTopMenu(sf::RenderWindow& window);
     void handleFileSelection(sf::Vector2f mousePos);
-    void createNewFile();
+    void createNewFile(const std::string& name);
     void toggleOutputPanel();
     void updateLayout();
 

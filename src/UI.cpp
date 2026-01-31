@@ -54,6 +54,15 @@ void InputField::draw(RenderWindow& window) {
     }
 }
 
+void InputField::setString(const string& str) {
+    content = str;
+    if (isPassword) {
+        text.setString(string(content.size(), '*'));
+    } else {
+        text.setString(content);
+    }
+}
+
 string InputField::getString() const { return content; }
 bool InputField::getFocused() const { return isFocused; }
 void InputField::setFocused(bool focused) { 
@@ -62,6 +71,16 @@ void InputField::setFocused(bool focused) {
     box.setOutlineColor(isFocused ? Color::Cyan : Color(255, 255, 255, 100));
 }
 FloatRect InputField::getBounds() const { return box.getGlobalBounds(); }
+
+void InputField::setPosition(Vector2f pos) {
+    box.setPosition(pos);
+    text.setPosition({pos.x + 10, pos.y + 8});
+    placeholderText.setPosition({pos.x + 10, pos.y + 8});
+}
+
+void InputField::setSize(Vector2f size) {
+    box.setSize(size);
+}
 
 // --- Button ---
 
@@ -105,4 +124,18 @@ bool Button::isClicked(const Event& event, const RenderWindow& window) {
 void Button::draw(RenderWindow& window) {
     window.draw(shape);
     window.draw(label);
+}
+
+void Button::setPosition(Vector2f pos) {
+    shape.setPosition(pos);
+    setSize(shape.getSize()); // Re-center text
+}
+
+void Button::setSize(Vector2f size) {
+    shape.setSize(size);
+    Vector2f pos = shape.getPosition();
+    FloatRect textBounds = label.getLocalBounds();
+    label.setOrigin({textBounds.getPosition().x + textBounds.getSize().x / 2.0f,
+                    textBounds.getPosition().y + textBounds.getSize().y / 2.0f});
+    label.setPosition({pos.x + size.x / 2.0f, pos.y + size.y / 2.0f});
 }
