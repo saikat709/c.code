@@ -8,13 +8,13 @@ class Database {
     sqlite3* db;
     sqlite3_stmt* stmt;
 
-public:
-    Database();
-    ~Database();
-    bool connect();
-    bool executeQuery(const string& query);
-    json fetchAsJson(const string& query);
-    bool createDbTablesIfNotExists();
-    
-    void checkMutationQueries();
+    public:
+        Database();
+        ~Database();
+        bool connect();
+        bool executeQuery(const string& query);
+        json fetchAsJson(const string& query);
+        bool createDbTablesIfNotExists();
+        
+        void checkMutationQueries();
 };

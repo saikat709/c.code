@@ -6,11 +6,16 @@
 #include "ParticleSystem.hpp"
 #include "AppState.hpp"
 #include "UI.hpp"
+#include "json.hpp"
 
 
 class CodeEditorScreen {
     sf::Font& font;
     ParticleSystem& particles;
+    
+    // Window dimensions
+    float windowWidth;
+    float windowHeight;
     
     // UI Components
     sf::RectangleShape editorBox;
@@ -106,6 +111,34 @@ class CodeEditorScreen {
     bool needsSave = false;
     int currentFileId = -1;
     void saveFile();
+    
+    // File locking
+    bool currentFileIsLocked = false;
+    bool currentFileIsLockedByMe = false;
+    std::string currentFileLockOwner;
+    std::vector<bool> fileLockedStatus;
+    std::vector<std::string> fileLockedBy;
+    void requestFileEdit(int fileId);
+    void releaseFileLock();
+    
+    // Real-time updates
+    sf::Clock pollClock;
+    int lastMessageId = 0;
+    void pollForUpdates();
+    void handleServerBroadcast(const json& broadcast);
+    
+    // Edit request dialog
+    bool showEditRequestDialog = false;
+    sf::RectangleShape editRequestCard;
+    sf::Text editRequestTitle;
+    sf::Text editRequestMessage;
+    Button allowEditBtn;
+    Button denyEditBtn;
+    int pendingEditFileId = -1;
+    int pendingEditRequesterId = -1;
+    int pendingEditRequesterSocket = -1;
+    std::string pendingEditRequester;
+
     
     // Helper methods
     void executeCode();

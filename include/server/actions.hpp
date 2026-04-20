@@ -19,9 +19,17 @@ public:
     static bool updateFileContent(Database& db, int fileId, const std::string& content);
     static std::string getFileContent(Database& db, int fileId);
 
+    // File lock actions
+    static bool lockFile(Database& db, int fileId, int userId);
+    static bool unlockFile(Database& db, int fileId, int userId);
+    static json getFileLockInfo(Database& db, int fileId);
+    static bool isFileLocked(Database& db, int fileId);
+    static int getFileLockOwner(Database& db, int fileId);
+
     // Message actions
     static bool sendMessage(Database& db, int projectId, const std::string& sender, const std::string& message);
     static json getMessages(Database& db, int projectId);
+    static json getMessagesSince(Database& db, int projectId, int lastMessageId);
 
     // Collaboration
     static json getSharedProjects(Database& db, int userId);

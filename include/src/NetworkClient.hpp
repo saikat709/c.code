@@ -18,8 +18,10 @@ public:
 
     bool connectToServer(const std::string& ip, int port);
     json sendRequest(const json& request);
+    std::vector<json> getPendingNotifications();
 
 private:
     int clientSocket;
     bool isConnected;
+    std::vector<json> pendingNotifications;
 };

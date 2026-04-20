@@ -44,34 +44,62 @@ bool NetworkClient::connectToServer(const string& ip, int port) {
 json NetworkClient::sendRequest(const json& request) {
     if (!isConnected) {
         cerr << "Not connected to server" << endl;
-        return {{"status", "error"}, {"message", "Not connected"}};
+        return {
+            {"status", "error"}, 
+            {"message", "Not connected"}
+        };
     }
 
     string requestData = request.dump();
-    cout << "Sending request: " << requestData << endl;
+    // cout << "Sending request: " << requestData << endl;
     Huffman huffman;
     string requestStr = huffman.compress(requestData);
-    cout << "Compressed request: " << requestStr << endl;
+    // cout << "Compressed request: " << requestStr << endl;
     if (send(clientSocket, requestStr.c_str(), requestStr.size(), 0) == -1) {
         cerr << "Send failed" << endl;
-        return {{"status", "error"}, {"message", "Send failed"}};
+        return {
+            {"status", "error"}, 
+            {"message", "Send failed"}
+        };
     }
 
     char buffer[4096];
-    int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
-    if (bytesReceived > 0) {
-        buffer[bytesReceived] = '\0';
-        try {
-            string responseStr(buffer);
-            // cout << "Received response: " << responseStr << endl;
-            string decompressedResponse = huffman.decompress(responseStr);
-            return json::parse(decompressedResponse);
-        } catch (const json::parse_error& e) {
-            cerr << "JSON Parse Error: " << e.what() << endl;
-            return {{"status", "error"}, {"message", "Invalid JSON response"}};
+    while (true) {
+        int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
+        if (bytesReceived > 0) {
+            buffer[bytesReceived] = '\0';
+            try {
+                string responseStr(buffer);
+                string decompressedResponse = huffman.decompress(responseStr);
+                json response = json::parse(decompressedResponse);
+                
+                // If it's an asynchronous notification/event
+                if (response.contains("action") && response["action"] == "edit_request") {
+                    pendingNotifications.push_back(response);
+                    // cout << "Queued async notification: " << response["action"] << endl;
+                    continue; // Wait for the expected synchronous response
+                }
+                
+                return response;
+            } catch (const json::parse_error& e) {
+                cerr << "JSON Parse Error: " << e.what() << endl;
+                return {
+                    {"status", "error"}, 
+                    {"message", "Invalid JSON response"}
+                };
+            }
+        } else {
+            cerr << "Receive failed or connection closed" << endl;
+            return {
+                {"status", "error"}, 
+                {"message", "Receive failed"}
+            };
         }
-    } else {
-        cerr << "Receive failed or connection closed" << endl;
-        return {{"status", "error"}, {"message", "Receive failed"}};
     }
+}
+
+vector<json> NetworkClient::getPendingNotifications() {
+    vector<json> temp = pendingNotifications;
+    pendingNotifications.clear();
+    return temp;
 }

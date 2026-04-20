@@ -1,19 +1,21 @@
 #include "ParticleSystem.hpp"
 #include <cstdint>
 
+#define urd uniform_real_distribution
+
 using namespace std;
 using namespace sf;
 
 ParticleSystem::ParticleSystem(unsigned int count, Vector2u size) : windowSize(size) {
     rng.seed(random_device()());
-    uniform_real_distribution<float> distX(0, (float)size.x);
-    uniform_real_distribution<float> distY(0, (float)size.y);
-    uniform_real_distribution<float> distVel(-0.5f, 0.5f);
-    uniform_real_distribution<float> distRad(2.0f, 5.0f);
-    uniform_real_distribution<float> distAlpha(50.0f, 150.0f);
+    urd<float> distX(0, (float)size.x);
+    urd<float> distY(0, (float)size.y);
+    urd<float> distVel(-0.5f, 0.5f);
+    urd<float> distRad(2.0f, 5.0f);
+    urd<float> distAlpha(50.0f, 150.0f);
 
     for (unsigned int i = 0; i < count; ++i) {
-        particles.push_back({
+        particles.push_back(Particle{
             {distX(rng), distY(rng)},
             {distVel(rng), distVel(rng)},
             distRad(rng),

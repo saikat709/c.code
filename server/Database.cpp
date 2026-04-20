@@ -72,6 +72,18 @@ bool Database::createDbTablesIfNotExists() {
         return false;
     }
 
+    string fileLocksSql = "CREATE TABLE IF NOT EXISTS file_locks ("
+                          "fileId INTEGER PRIMARY KEY,"
+                          "userId INTEGER NOT NULL,"
+                          "username TEXT NOT NULL,"
+                          "lockedAt DATETIME DEFAULT CURRENT_TIMESTAMP,"
+                          "FOREIGN KEY(fileId) REFERENCES files(id),"
+                          "FOREIGN KEY(userId) REFERENCES users(id));";
+    if (!executeQuery(fileLocksSql)) {
+        cerr << "Failed to create file_locks table" << endl;
+        return false;
+    }
+
     return true;
 }
 
