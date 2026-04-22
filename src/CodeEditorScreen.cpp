@@ -22,6 +22,7 @@ CodeEditorScreen::CodeEditorScreen(Font& font, ParticleSystem& particles, Vector
       shareBtn(font, "Share", {450, 5}, {80, 30}),
       backBtn(font, "Back", {535, 5}, {80, 30}),
       logoutBtn(font, "Logout", {700, 5}, {90, 30}),
+      requestAccessBtn(font, "Request Access", {0, 0}, {140, 30}),
       editorLabel("Code Editor", font, 18),
       outputLabel("Output", font, 18),
       codeText("", font, 14),
@@ -134,6 +135,11 @@ CodeEditorScreen::CodeEditorScreen(Font& font, ParticleSystem& particles, Vector
     // Labels
     editorLabel.setFillColor(Color::White);
     editorLabel.setPosition({205, 45});
+
+    fileLockInfoText.setFont(font);
+    fileLockInfoText.setCharacterSize(13);
+    fileLockInfoText.setFillColor(Color(255, 180, 120));
+    fileLockInfoText.setString("");
     
     outputLabel.setFillColor(Color::White);
     outputLabel.setPosition({205, 345});
@@ -296,42 +302,25 @@ void CodeEditorScreen::loadFiles() {
             selectedFileIndex = 0;
             requestFileEdit(fileIds[0]); // Request lock for first file
             fetchFileContent(fileIds[0]);
+        } else if (currentFileId != -1) {
+            for (size_t i = 0; i < fileIds.size(); i++) {
+                if (fileIds[i] == currentFileId) {
+                    currentFileIsLocked = (i < fileLockedStatus.size()) ? fileLockedStatus[i] : false;
+                    currentFileLockOwner = (i < fileLockedBy.size()) ? fileLockedBy[i] : "";
+                    currentFileIsLockedByMe = currentFileIsLocked && currentFileLockOwner == Session::getInstance().getUsername();
+                    if (currentFileIsLocked) {
+                        fileLockInfoText.setString(currentFileIsLockedByMe ? "Editing as you" : "Locked by " + currentFileLockOwner);
+                    } else {
+                        fileLockInfoText.setString("");
+                    }
+                    break;
+                }
+            }
         }
     }
 }
 
 void CodeEditorScreen::pollForUpdates() {
-    if (pollClock.getElapsedTime().asSeconds() < 2.0f) return;
-    pollClock.restart();
-    
-    // Poll for new messages
-    json request;
-    request["action"] = "get_messages_since";
-    request["project_id"] = Session::getInstance().getCurrentProjectId();
-    request["last_message_id"] = lastMessageId;
-    
-    json response = Session::getInstance().getNetworkClient()->sendRequest(request);
-    
-    if (response["status"] == "success" && !response["messages"].empty()) {
-        bool newMessages = false;
-        for (auto& msg : response["messages"]) {
-            int msgId = msg["id"];
-            if (msgId > lastMessageId) {
-                lastMessageId = msgId;
-                newMessages = true;
-            }
-        }
-        if (newMessages) loadMessages(); 
-    }
-    
-    // Simple polling for file locks
-    static sf::Clock filePollClock;
-    if (filePollClock.getElapsedTime().asSeconds() > 5.0f) {
-         loadFiles();
-         filePollClock.restart();
-    }
-    
-    // Process any asynchronous notifications received during the above requests
     auto notifications = Session::getInstance().getNetworkClient()->getPendingNotifications();
     for (const auto& notif : notifications) {
          handleServerBroadcast(notif);
@@ -339,9 +328,9 @@ void CodeEditorScreen::pollForUpdates() {
 }
 
 void CodeEditorScreen::handleServerBroadcast(const json& broadcast) {
-    string action = broadcast.value("action", "");
-    
-    if (action == "edit_request") {
+    string kind = broadcast.value("type", broadcast.value("action", ""));
+
+    if (kind == "edit_request") {
         pendingEditRequester = broadcast.value("requester", "Unknown");
         pendingEditFileId = broadcast.value("file_id", -1);
         showEditRequestDialog = true;
@@ -366,6 +355,53 @@ void CodeEditorScreen::handleServerBroadcast(const json& broadcast) {
         
         allowEditBtn.setPosition({centerX - 130, centerY + 50});
         denyEditBtn.setPosition({centerX + 10, centerY + 50});
+    } else if (kind == "edit_request_response") {
+        int fileId = broadcast.value("file_id", -1);
+        if (fileId == currentFileId) {
+            bool allowed = broadcast.value("allowed", false);
+            currentFileIsLocked = true;
+            currentFileIsLockedByMe = allowed;
+            currentFileLockOwner = allowed ? Session::getInstance().getUsername() : currentFileLockOwner;
+            fileLockInfoText.setString(allowed ? "Editing as you" : "Access denied");
+            if (allowed) {
+                editorLabel.setString("Code Editor - " + fileList[selectedFileIndex]);
+            }
+        }
+    } else if (kind == "file_locked") {
+        int fileId = broadcast.value("file_id", -1);
+        string lockedBy = broadcast.value("locked_by", "");
+        for (size_t i = 0; i < fileIds.size(); i++) {
+            if (fileIds[i] == fileId) {
+                if (i < fileLockedStatus.size()) fileLockedStatus[i] = true;
+                if (i < fileLockedBy.size()) fileLockedBy[i] = lockedBy;
+                break;
+            }
+        }
+        if (fileId == currentFileId) {
+            currentFileIsLocked = true;
+            currentFileIsLockedByMe = (lockedBy == Session::getInstance().getUsername());
+            currentFileLockOwner = lockedBy;
+            fileLockInfoText.setString(currentFileIsLockedByMe ? "Editing as you" : "Locked by " + lockedBy);
+        }
+    } else if (kind == "file_unlocked") {
+        int fileId = broadcast.value("file_id", -1);
+        for (size_t i = 0; i < fileIds.size(); i++) {
+            if (fileIds[i] == fileId) {
+                if (i < fileLockedStatus.size()) fileLockedStatus[i] = false;
+                if (i < fileLockedBy.size()) fileLockedBy[i] = "";
+                break;
+            }
+        }
+        if (fileId == currentFileId) {
+            currentFileIsLocked = false;
+            currentFileIsLockedByMe = false;
+            currentFileLockOwner.clear();
+            fileLockInfoText.setString("");
+        }
+    } else if (kind == "new_message") {
+        int messageId = broadcast.value("id", 0);
+        if (messageId > lastMessageId) lastMessageId = messageId;
+        loadMessages();
     }
 }
 
@@ -381,20 +417,16 @@ void CodeEditorScreen::requestFileEdit(int fileId) {
             currentFileIsLockedByMe = true;
             currentFileIsLocked = true;
             currentFileLockOwner = Session::getInstance().getUsername();
+            fileLockInfoText.setString("Editing as you");
         } else {
             currentFileIsLockedByMe = false;
             currentFileIsLocked = true;
-            // The server might send "pending" status or similar? 
-            // In Server.cpp, it returns "status": "success", "granted": true/false.
-            // If granted is false, it means someone else has it, and request was forwarded?
-            // "edit_request_sent" is returned if forwarded.
-            
-            string status = response.value("status", "");
-            if (status == "edit_request_sent") {
-                 // Notify user request sent (maybe console or UI)
-                 cout << "Edit request sent to owner." << endl;
-            }
         }
+    } else if (response["status"] == "pending") {
+        currentFileIsLockedByMe = false;
+        currentFileIsLocked = true;
+        fileLockInfoText.setString("Access requested from owner");
+        cout << response.value("message", "Edit request sent.") << endl;
     }
 }
 
@@ -409,6 +441,8 @@ void CodeEditorScreen::releaseFileLock() {
     Session::getInstance().getNetworkClient()->sendRequest(request);
     currentFileIsLockedByMe = false;
     currentFileIsLocked = false;
+    currentFileLockOwner.clear();
+    fileLockInfoText.setString("");
 }
 
 void CodeEditorScreen::fetchFileContent(int fileId) {
@@ -421,12 +455,24 @@ void CodeEditorScreen::fetchFileContent(int fileId) {
         code = response.value("content", "");
         currentFileId = fileId;
         cursorPos = code.length();
+        currentFileIsLocked = response.value("locked", false);
+        currentFileLockOwner = response.value("lockedBy", "");
+        currentFileIsLockedByMe = currentFileIsLocked && response.value("lockedByUserId", -1) == Session::getInstance().getUserId();
+        if (currentFileIsLocked) {
+            if (currentFileIsLockedByMe) fileLockInfoText.setString("Editing as you");
+            else fileLockInfoText.setString("Locked by " + currentFileLockOwner);
+        } else {
+            fileLockInfoText.setString("");
+        }
+        if (selectedFileIndex >= 0 && selectedFileIndex < static_cast<int>(fileList.size())) {
+            editorLabel.setString("Code Editor - " + fileList[selectedFileIndex]);
+        }
         updateCodeDisplay();
     }
 }
 
 void CodeEditorScreen::saveFile() {
-    if (currentFileId == -1) return;
+    if (currentFileId == -1 || (currentFileIsLocked && !currentFileIsLockedByMe)) return;
     
     json request;
     request["action"] = "save_file";
@@ -513,6 +559,12 @@ void CodeEditorScreen::createNewFile(const string& name) {
                 break;
             }
         }
+        if (!currentFileIsLocked || !currentFileIsLockedByMe) {
+            requestFileEdit(newId);
+        }
+        if (selectedFileIndex >= 0 && selectedFileIndex < static_cast<int>(fileList.size())) {
+            editorLabel.setString("Code Editor - " + fileList[selectedFileIndex]);
+        }
         updateLayout();
     }
 }
@@ -529,10 +581,16 @@ void CodeEditorScreen::handleFileSelection(Vector2f mousePos) {
         releaseFileLock(); // Release lock on current file
         
         selectedFileIndex = clickedIndex;
-        requestFileEdit(fileIds[selectedFileIndex]); // Request lock for new file
         fetchFileContent(fileIds[selectedFileIndex]);
+        if (!currentFileIsLocked) {
+            requestFileEdit(fileIds[selectedFileIndex]);
+        }
         
-        editorLabel.setString("Code Editor - " + fileList[selectedFileIndex]);
+        if (currentFileIsLocked && !currentFileIsLockedByMe) {
+            editorLabel.setString("Code Editor - " + fileList[selectedFileIndex] + " [Locked by " + currentFileLockOwner + "]");
+        } else {
+            editorLabel.setString("Code Editor - " + fileList[selectedFileIndex]);
+        }
     }
 }
 
@@ -572,6 +630,8 @@ void CodeEditorScreen::updateLayout() {
         outputHandle.setSize({editorWidth, 5});
         
         editorLabel.setPosition({editorX + 5, topBarHeight + 5});
+        fileLockInfoText.setPosition({editorX + 170, topBarHeight + 8});
+        requestAccessBtn.setPosition({editorX + editorWidth - 155, topBarHeight + 3});
         outputLabel.setPosition({editorX + 5, topBarHeight + editorHeight + 5});
         codeText.setPosition({editorX + 10, topBarHeight + 30});
         outputText.setPosition({editorX + 10, topBarHeight + editorHeight + 30});
@@ -581,6 +641,8 @@ void CodeEditorScreen::updateLayout() {
         outputBox.setSize({editorWidth, 0});
         
         editorLabel.setPosition({editorX + 5, topBarHeight + 5});
+        fileLockInfoText.setPosition({editorX + 170, topBarHeight + 8});
+        requestAccessBtn.setPosition({editorX + editorWidth - 155, topBarHeight + 3});
         codeText.setPosition({editorX + 10, topBarHeight + 30});
     }
     
@@ -649,14 +711,23 @@ void CodeEditorScreen::drawSidebar(RenderWindow& window) {
         string displayText = fileList[i];
         if (isLocked) {
             string owner = (i < fileLockedBy.size()) ? fileLockedBy[i] : "?";
-            displayText += " [LOCKED: " + owner + "]";
+            if (owner == Session::getInstance().getUsername()) {
+                displayText += " [LOCKED BY YOU]";
+            } else {
+                displayText += " [LOCKED: " + owner + "]";
+            }
         }
 
         Text fileText(displayText, font, 12);
         fileText.setPosition({10, yPos + 3});
         
         if (isLocked) {
-             fileText.setFillColor(Color(255, 100, 100));
+            string owner = (i < fileLockedBy.size()) ? fileLockedBy[i] : "";
+            if (owner == Session::getInstance().getUsername()) {
+                fileText.setFillColor(Color(120, 220, 180));
+            } else {
+                fileText.setFillColor(Color(255, 110, 110));
+            }
         } else {
              fileText.setFillColor(Color(200, 220, 240));
         }
@@ -695,12 +766,6 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
         // Debounce Save Check
         if (needsSave && lastEditClock.getElapsedTime().asSeconds() > 1.0f) {
             saveFile();
-        }
-
-        // Process any asynchronous notifications every frame for real-time updates
-        auto notifications = Session::getInstance().getNetworkClient()->getPendingNotifications();
-        for (const auto& notif : notifications) {
-            handleServerBroadcast(notif);
         }
 
         if (showSharePopup) {
@@ -791,6 +856,10 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
             if (toggleOutputBtn.isClicked(event, window)) toggleOutputPanel();
             if (chatBtn.isClicked(event, window)) {
                 chatVisible = !chatVisible;
+                updateLayout();
+            }
+            if (currentFileIsLocked && !currentFileIsLockedByMe && requestAccessBtn.isClicked(event, window)) {
+                requestFileEdit(currentFileId);
                 updateLayout();
             }
             if (shareBtn.isClicked(event, window)) {
@@ -888,7 +957,7 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
                             newFileName += c;
                             fileNameInputText.setString(newFileName);
                         }
-                    } else if (!chatInputField.getFocused()) {
+                    } else if (!chatInputField.getFocused() && (!currentFileIsLocked || currentFileIsLockedByMe)) {
                         // Regular code input
                         bool changed = false;
                         if (c == '\b') {
@@ -913,6 +982,10 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
             if (event.type == sf::Event::KeyPressed) {
                 bool shiftPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) || sf::Keyboard::isKeyPressed(sf::Keyboard::RShift);
                 bool ctrlPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::RControl);
+
+                if (currentFileIsLocked && !currentFileIsLockedByMe) {
+                    continue;
+                }
                 
                 if (ctrlPressed) {
                     if (event.key.code == sf::Keyboard::C && hasSelection()) Clipboard::setString(getSelectedText());
@@ -979,10 +1052,19 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
         if (chatVisible) {
             sendChatBtn.update(window);
         }
+        if (currentFileIsLocked && !currentFileIsLockedByMe) {
+            requestAccessBtn.update(window);
+        }
     } // This closes the 'else' block which corresponds to (!showSharePopup)
         
     if (showSharePopup) {
         closeShareBtn.update(window);
+        if (!fileLockInfoText.getString().isEmpty()) {
+            window.draw(fileLockInfoText);
+        }
+        if (currentFileIsLocked && !currentFileIsLockedByMe) {
+            requestAccessBtn.draw(window);
+        }
     }
     particles.update();
 

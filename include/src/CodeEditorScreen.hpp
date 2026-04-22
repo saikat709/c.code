@@ -8,9 +8,12 @@
 #include "UI.hpp"
 #include "json.hpp"
 
+using namespace sf;
+using namespace std;
+
 
 class CodeEditorScreen {
-    sf::Font& font;
+    Font& font;
     ParticleSystem& particles;
     
     // Window dimensions
@@ -18,21 +21,21 @@ class CodeEditorScreen {
     float windowHeight;
     
     // UI Components
-    sf::RectangleShape editorBox;
-    sf::RectangleShape outputBox;
-    sf::Text editorLabel;
-    sf::Text outputLabel;
-    sf::Text codeText;
-    sf::Text outputText;
+    RectangleShape editorBox;
+    RectangleShape outputBox;
+    Text editorLabel;
+    Text outputLabel;
+    Text codeText;
+    Text outputText;
     
     // Code content
-    std::string code;
-    std::string output;
+    string code;
+    string output;
     
     // Cursor and editing
     size_t cursorPos = 0;
-    sf::RectangleShape cursor;
-    sf::Clock cursorBlink;
+    RectangleShape cursor;
+    Clock cursorBlink;
     
     // Text selection
     size_t selectionStart = 0;
@@ -49,31 +52,31 @@ class CodeEditorScreen {
     bool isResizingChat = false;
     bool isResizingOutput = false;
     
-    sf::RectangleShape sidebarHandle;
-    sf::RectangleShape chatHandle;
-    sf::RectangleShape outputHandle;
+    RectangleShape sidebarHandle;
+    RectangleShape chatHandle;
+    RectangleShape outputHandle;
 
     // Scrolling
     int codeScrollOffset = 0;
     int outputScrollOffset = 0;
     
     // Sidebar components
-    sf::RectangleShape sidebarBox;
-    std::vector<std::string> fileList;
-    std::vector<int> fileIds;
+    RectangleShape sidebarBox;
+    vector<string> fileList;
+    vector<int> fileIds;
     int selectedFileIndex = 0;
     Button newFileBtn;
     int sidebarScrollOffset = 0;
-    sf::Text sidebarTitle;
+    Text sidebarTitle;
     
     // File naming input
     bool isNamingFile = false;
-    std::string newFileName;
-    sf::Text fileNameInputText;
-    sf::RectangleShape fileNameInputBox;
+    string newFileName;
+    Text fileNameInputText;
+    RectangleShape fileNameInputBox;
     
     // Top menu bar components
-    sf::RectangleShape topMenuBar;
+    RectangleShape topMenuBar;
     Button fileMenuBtn;
     Button editMenuBtn;
     Button viewMenuBtn;
@@ -89,9 +92,9 @@ class CodeEditorScreen {
 
     // Chat Screen
     bool chatVisible = false;
-    sf::RectangleShape chatBox;
-    sf::Text chatTitle;
-    std::vector<sf::Text> messageDisplay;
+    RectangleShape chatBox;
+    Text chatTitle;
+    vector<Text> messageDisplay;
     InputField chatInputField;
     Button sendChatBtn;
     void updateChatDisplay();
@@ -100,14 +103,14 @@ class CodeEditorScreen {
     
     // Share Popup
     bool showSharePopup = false;
-    sf::RectangleShape popupOverlay;
-    sf::RectangleShape sharePopupCard;
-    sf::Text sharePopupTitle;
-    sf::Text sharePopupInfo;
+    RectangleShape popupOverlay;
+    RectangleShape sharePopupCard;
+    Text sharePopupTitle;
+    Text sharePopupInfo;
     Button closeShareBtn;
 
     // Debounce Save
-    sf::Clock lastEditClock;
+    Clock lastEditClock;
     bool needsSave = false;
     int currentFileId = -1;
     void saveFile();
@@ -115,58 +118,60 @@ class CodeEditorScreen {
     // File locking
     bool currentFileIsLocked = false;
     bool currentFileIsLockedByMe = false;
-    std::string currentFileLockOwner;
-    std::vector<bool> fileLockedStatus;
-    std::vector<std::string> fileLockedBy;
+    string currentFileLockOwner;
+    Text fileLockInfoText;
+    Button requestAccessBtn;
+    vector<bool> fileLockedStatus;
+    vector<string> fileLockedBy;
     void requestFileEdit(int fileId);
     void releaseFileLock();
     
     // Real-time updates
-    sf::Clock pollClock;
+    Clock pollClock;
     int lastMessageId = 0;
     void pollForUpdates();
     void handleServerBroadcast(const json& broadcast);
     
     // Edit request dialog
     bool showEditRequestDialog = false;
-    sf::RectangleShape editRequestCard;
-    sf::Text editRequestTitle;
-    sf::Text editRequestMessage;
+    RectangleShape editRequestCard;
+    Text editRequestTitle;
+    Text editRequestMessage;
     Button allowEditBtn;
     Button denyEditBtn;
     int pendingEditFileId = -1;
     int pendingEditRequesterId = -1;
     int pendingEditRequesterSocket = -1;
-    std::string pendingEditRequester;
+    string pendingEditRequester;
 
     
     // Helper methods
     void executeCode();
     void updateCodeDisplay();
     void updateOutputDisplay();
-    std::vector<std::string> splitLines(const std::string& text);
+    vector<string> splitLines(const string& text);
     void loadFiles();
     void fetchFileContent(int fileId);
     
     // Cursor and selection helpers
-    size_t getCursorPosFromClick(sf::Vector2f mousePos);
+    size_t getCursorPosFromClick(Vector2f mousePos);
     void moveCursorUp();
     void moveCursorDown();
     void deleteSelection();
-    std::string getSelectedText();
+    string getSelectedText();
     bool hasSelection();
     void clearSelection();
-    void drawSelection(sf::RenderWindow& window);
+    void drawSelection(RenderWindow& window);
     
     // New UI helpers
-    void drawSidebar(sf::RenderWindow& window);
-    void drawTopMenu(sf::RenderWindow& window);
-    void handleFileSelection(sf::Vector2f mousePos);
-    void createNewFile(const std::string& name);
+    void drawSidebar(RenderWindow& window);
+    void drawTopMenu(RenderWindow& window);
+    void handleFileSelection(Vector2f mousePos);
+    void createNewFile(const string& name);
     void toggleOutputPanel();
     void updateLayout();
 
 public:
-    CodeEditorScreen(sf::Font& font, ParticleSystem& particles, sf::Vector2u windowSize);
-    AppState run(sf::RenderWindow& window);
+    CodeEditorScreen(Font& font, ParticleSystem& particles, Vector2u windowSize);
+    AppState run(RenderWindow& window);
 };

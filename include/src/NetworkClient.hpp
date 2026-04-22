@@ -7,24 +7,39 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 
+#include <condition_variable>
+#include <mutex>
+#include <queue>
+#include <thread>
+
 #include <string>
 #include <iostream>
 #include "json.hpp"
+
+using namespace std;
 
 class NetworkClient {
 public:
     NetworkClient();
     ~NetworkClient();
 
-    bool connectToServer(const std::string& ip, int port);
+    bool connectToServer(const string& ip, int port);
     json sendRequest(const json& request);
-    std::vector<json> getPendingNotifications();
+    vector<json> getPendingNotifications();
 
 private:
     int clientSocket;
     bool isConnected;
-    std::vector<json> pendingNotifications;
-    std::thread* listenerThread = nullptr;
-    bool stopListener = false;
+    bool stopListener;
+    thread listenerThread;
+
+    mutex sendMutex;
+    mutex pendingMutex;
+    mutex responseMutex;
+    condition_variable responseCv;
+
+    vector<json> pendingNotifications;
+    queue<json> pendingResponses;
+
     void listenForBroadcasts();
 };

@@ -55,7 +55,13 @@ int DBActions::createFile(Database& db, const string& fileName, int projectId) {
 }
 
 json DBActions::getFiles(Database& db, int projectId) {
-    string query = "SELECT id, name FROM files WHERE projectId = " + to_string(projectId) + ";";
+    string query = "SELECT f.id, f.name, "
+                   "CASE WHEN l.fileId IS NULL THEN 0 ELSE 1 END AS locked, "
+                   "COALESCE(l.username, '') AS lockedBy, "
+                   "COALESCE(l.userId, -1) AS lockedByUserId "
+                   "FROM files f "
+                   "LEFT JOIN file_locks l ON f.id = l.fileId "
+                   "WHERE f.projectId = " + to_string(projectId) + ";";
     return db.fetchAsJson(query);
 }
 

@@ -1,21 +1,19 @@
 #include <iostream>
+#include <chrono>
 #include "NetworkClient.hpp"
 #include "json.hpp"
 #include "huffman.hpp"
-#include <thread>
-#include <atomic>
 
 using namespace std;
 
-NetworkClient::NetworkClient() : clientSocket(-1), isConnected(false) {
+NetworkClient::NetworkClient() : clientSocket(-1), isConnected(false), stopListener(false) {
     printf("NetworkClient initialized\n");
-    listenerThread = nullptr;
 }
 
 NetworkClient::~NetworkClient() {
     stopListener = true;
-    if (listenerThread && listenerThread->joinable()) listenerThread->join();
-    delete listenerThread;
+    if (clientSocket != -1) shutdown(clientSocket, SHUT_RDWR);
+    if (listenerThread.joinable()) listenerThread.join();
     if (clientSocket != -1) close(clientSocket);
 }
 
@@ -43,31 +41,47 @@ bool NetworkClient::connectToServer(const string& ip, int port) {
     }
 
     isConnected = true;
-    cout << "Connected to server at " << ip << ":" << port << endl;
     stopListener = false;
-    if (!listenerThread) listenerThread = new std::thread(&NetworkClient::listenForBroadcasts, this);
-    return true;
+    if (!listenerThread.joinable()) {
+        listenerThread = thread(&NetworkClient::listenForBroadcasts, this);
+    }
 
+    cout << "Connected to server at " << ip << ":" << port << endl;
+    return true;
 }
 
 void NetworkClient::listenForBroadcasts() {
     Huffman huffman;
     char buffer[4096];
+
     while (!stopListener && isConnected) {
-        int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), MSG_DONTWAIT);
-        if (bytesReceived > 0) {
-            buffer[bytesReceived] = '\0';
-            try {
-                string responseStr(buffer);
-                string decompressedResponse = huffman.decompress(responseStr);
-                json response = json::parse(decompressedResponse);
-                // If it's a broadcast (has 'type' or 'action' and not a direct response)
-                if ((response.contains("type") || response.contains("action")) && !response.contains("status")) {
-                    pendingNotifications.push_back(response);
+        int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
+        if (bytesReceived <= 0) {
+            if (!stopListener) {
+                isConnected = false;
+                responseCv.notify_all();
+            }
+            break;
+        }
+
+        buffer[bytesReceived] = '\0';
+        try {
+            string responseStr(buffer);
+            string decompressedResponse = huffman.decompress(responseStr);
+            json payload = json::parse(decompressedResponse);
+
+            if (payload.contains("status")) {
+                {
+                    lock_guard<mutex> lock(responseMutex);
+                    pendingResponses.push(payload);
                 }
-            } catch (...) {}
-        } else {
-            std::this_thread::sleep_for(std::chrono::milliseconds(30));
+                responseCv.notify_one();
+            } else {
+                lock_guard<mutex> lock(pendingMutex);
+                pendingNotifications.push_back(payload);
+            }
+        } catch (const json::parse_error& e) {
+            cerr << "JSON Parse Error in listener: " << e.what() << endl;
         }
     }
 }
@@ -76,60 +90,42 @@ json NetworkClient::sendRequest(const json& request) {
     if (!isConnected) {
         cerr << "Not connected to server" << endl;
         return {
-            {"status", "error"}, 
+            {"status", "error"},
             {"message", "Not connected"}
         };
     }
 
-    string requestData = request.dump();
-    // cout << "Sending request: " << requestData << endl;
+    lock_guard<mutex> sendLock(sendMutex);
+
     Huffman huffman;
-    string requestStr = huffman.compress(requestData);
-    // cout << "Compressed request: " << requestStr << endl;
+    string requestStr = huffman.compress(request.dump());
     if (send(clientSocket, requestStr.c_str(), requestStr.size(), 0) == -1) {
         cerr << "Send failed" << endl;
         return {
-            {"status", "error"}, 
+            {"status", "error"},
             {"message", "Send failed"}
         };
     }
 
-    char buffer[4096];
-    while (true) {
-        int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
-        if (bytesReceived > 0) {
-            buffer[bytesReceived] = '\0';
-            try {
-                string responseStr(buffer);
-                string decompressedResponse = huffman.decompress(responseStr);
-                json response = json::parse(decompressedResponse);
-                
-                // If it's an asynchronous notification/event
-                if (response.contains("action") && response["action"] == "edit_request") {
-                    pendingNotifications.push_back(response);
-                    // cout << "Queued async notification: " << response["action"] << endl;
-                    continue; // Wait for the expected synchronous response
-                }
-                
-                return response;
-            } catch (const json::parse_error& e) {
-                cerr << "JSON Parse Error: " << e.what() << endl;
-                return {
-                    {"status", "error"}, 
-                    {"message", "Invalid JSON response"}
-                };
-            }
-        } else {
-            cerr << "Receive failed or connection closed" << endl;
-            return {
-                {"status", "error"}, 
-                {"message", "Receive failed"}
-            };
-        }
+    unique_lock<mutex> lock(responseMutex);
+    responseCv.wait(lock, [this]() {
+        return !pendingResponses.empty() || !isConnected || stopListener;
+    });
+
+    if (pendingResponses.empty()) {
+        return {
+            {"status", "error"},
+            {"message", "Receive failed"}
+        };
     }
+
+    json response = pendingResponses.front();
+    pendingResponses.pop();
+    return response;
 }
 
 vector<json> NetworkClient::getPendingNotifications() {
+    lock_guard<mutex> lock(pendingMutex);
     vector<json> temp = pendingNotifications;
     pendingNotifications.clear();
     return temp;
