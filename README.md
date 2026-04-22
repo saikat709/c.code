@@ -11,12 +11,12 @@
 
 Packages for linux ( with install commands ):
     
-    ```bash
-    sudo apt update
-    sudo apt install libsfml-dev    # 2.*.*
-    sudo apt install nlohmann-json3-dev 
-    sudo apt install libsqlite3-dev
-    ``` 
+```bash
+sudo apt update
+sudo apt install libsfml-dev    # 2.*.*
+sudo apt install nlohmann-json3-dev 
+sudo apt install libsqlite3-dev
+``` 
 
 ## Setup
 1.  **Clone/Open**: Open this folder in VS Code.
