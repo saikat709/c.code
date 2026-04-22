@@ -12,8 +12,8 @@ public:
     int getUserId() const { return userId; }
     void setUserId(int id) { userId = id; }
 
-    std::string getUsername() const { return username; }
-    void setUsername(const std::string& name) { username = name; }
+    string getUsername() const { return username; }
+    void setUsername(const string& name) { username = name; }
 
     int getCurrentProjectId() const { return currentProjectId; }
     void setCurrentProjectId(int id) { currentProjectId = id; }
@@ -28,7 +28,7 @@ public:
 private:
     Session() : userId(0), currentProjectId(0), networkClient(nullptr) {}
     int userId;
-    std::string username;
+    string username;
     int currentProjectId;
     NetworkClient* networkClient;
 };

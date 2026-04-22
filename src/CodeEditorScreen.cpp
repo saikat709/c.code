@@ -14,8 +14,8 @@ CodeEditorScreen::CodeEditorScreen(Font& font, ParticleSystem& particles, Vector
       windowWidth((float)windowSize.x), windowHeight((float)windowSize.y),
       newFileBtn(font, "+ New File", {10, 560}, {180, 35}),
       fileMenuBtn(font, "File", {20, 5}, {60, 30}),
-      editMenuBtn(font, "Edit", {85, 5}, {60, 30}),
-      viewMenuBtn(font, "View", {150, 5}, {60, 30}),
+    //   editMenuBtn(font, "Edit", {85, 5}, {60, 30}),
+    //   viewMenuBtn(font, "View", {150, 5}, {60, 30}),
       runMenuBtn(font, "Run", {215, 5}, {60, 30}),
       toggleOutputBtn(font, "Output", {280, 5}, {80, 30}),
       chatBtn(font, "Chat", {365, 5}, {80, 30}),
@@ -69,7 +69,7 @@ CodeEditorScreen::CodeEditorScreen(Font& font, ParticleSystem& particles, Vector
     closeShareBtn = Button(font, "OK", {0, 0}, {80, 30}); // Will position in layout
     showSharePopup = false;
     // Sidebar Box (left side, full height minus top bar)
-    sidebarBox.setSize({200, 560});
+    sidebarBox.setSize({250, 560});
     sidebarBox.setPosition({0, 40});
     sidebarBox.setFillColor(Color(20, 30, 45, 240));
     sidebarBox.setOutlineThickness(1);
@@ -371,8 +371,8 @@ void CodeEditorScreen::drawSidebar(RenderWindow& window) {
 void CodeEditorScreen::drawTopMenu(RenderWindow& window) {
     window.draw(topMenuBar);
     fileMenuBtn.draw(window);
-    editMenuBtn.draw(window);
-    viewMenuBtn.draw(window);
+    // editMenuBtn.draw(window);
+    // viewMenuBtn.draw(window);
     runMenuBtn.draw(window);
     toggleOutputBtn.draw(window);
     chatBtn.draw(window);
@@ -405,7 +405,7 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
         }
 
         if (showSharePopup) {
-            sf::Event event;
+            Event event;
             while (window.pollEvent(event)) {
                 if (event.type == Event::Closed) return AppState::EXIT;
                 
@@ -602,25 +602,25 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
                     if (shiftPressed) { if (!hasSelection()) selectionStart = cursorPos; moveCursorUp(); selectionEnd = cursorPos; }
                     else { moveCursorUp(); clearSelection(); }
                     updateCodeDisplay();
-                } else if (event.key.code == sf::Keyboard::Down) {
+                } else if (event.key.code == Keyboard::Down) {
                     if (shiftPressed) { if (!hasSelection()) selectionStart = cursorPos; moveCursorDown(); selectionEnd = cursorPos; }
                     else { moveCursorDown(); clearSelection(); }
                     updateCodeDisplay();
-                } else if (event.key.code == sf::Keyboard::Home) {
+                } else if (event.key.code == Keyboard::Home) {
                     if (shiftPressed && !hasSelection()) selectionStart = cursorPos;
                     while (cursorPos > 0 && code[cursorPos - 1] != '\n') cursorPos--;
                     if (shiftPressed) selectionEnd = cursorPos; else clearSelection();
                     preferredColumn = 0; updateCodeDisplay();
-                } else if (event.key.code == sf::Keyboard::End) {
+                } else if (event.key.code == Keyboard::End) {
                     if (shiftPressed && !hasSelection()) selectionStart = cursorPos;
                     while (cursorPos < code.length() && code[cursorPos] != '\n') cursorPos++;
                     if (shiftPressed) selectionEnd = cursorPos; else clearSelection();
                     preferredColumn = 0; updateCodeDisplay();
-                } else if (event.key.code == sf::Keyboard::Tab) {
+                } else if (event.key.code == Keyboard::Tab) {
                     if (hasSelection()) deleteSelection();
                     code.insert(cursorPos, "    "); cursorPos += 4; clearSelection();
                     updateCodeDisplay(); needsSave = true; lastEditClock.restart();
-                } else if (event.key.code == sf::Keyboard::Delete) {
+                } else if (event.key.code == Keyboard::Delete) {
                     if (hasSelection()) deleteSelection();
                     else if (cursorPos < code.length()) code.erase(cursorPos, 1);
                     updateCodeDisplay(); needsSave = true; lastEditClock.restart();

@@ -6,11 +6,10 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
-// Send a message with a 4-byte big-endian length prefix so the receiver
-// always knows exactly how many bytes to read.  Returns false on error.
-inline bool sendFramed(int fd, const std::string& data) {
+using namespace std;
+
+inline bool sendFramed(int fd, const string& data) {
     uint32_t len = htonl(static_cast<uint32_t>(data.size()));
-    // Send length prefix
     const char* lenPtr = reinterpret_cast<const char*>(&len);
     size_t sent = 0;
     while (sent < sizeof(len)) {
@@ -18,7 +17,6 @@ inline bool sendFramed(int fd, const std::string& data) {
         if (n <= 0) return false;
         sent += n;
     }
-    // Send payload
     sent = 0;
     while (sent < data.size()) {
         ssize_t n = send(fd, data.c_str() + sent, data.size() - sent, 0);
@@ -28,10 +26,7 @@ inline bool sendFramed(int fd, const std::string& data) {
     return true;
 }
 
-// Receive a framed message.  Blocks until all bytes arrive.
-// Returns false if the connection closed or an error occurred.
-inline bool recvFramed(int fd, std::string& out) {
-    // Read 4-byte length prefix
+inline bool recvFramed(int fd, string& out) {
     uint32_t netLen = 0;
     char* lenPtr = reinterpret_cast<char*>(&netLen);
     size_t received = 0;
@@ -43,7 +38,6 @@ inline bool recvFramed(int fd, std::string& out) {
     uint32_t msgLen = ntohl(netLen);
     if (msgLen == 0) { out.clear(); return true; }
 
-    // Read payload
     out.resize(msgLen);
     received = 0;
     while (received < msgLen) {

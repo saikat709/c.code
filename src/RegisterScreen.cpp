@@ -34,17 +34,17 @@ RegisterScreen::RegisterScreen(Font& font, ParticleSystem& particles, Vector2u w
 
 AppState RegisterScreen::run(RenderWindow& window) {
     while (window.isOpen()) {
-        sf::Event event;
+        Event event;
         while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed)
+            if (event.type == Event::Closed)
                 return AppState::EXIT;
             
             userField.handleEvent(event, window);
             passField.handleEvent(event, window);
             confirmPassField.handleEvent(event, window);
 
-            if (event.type == sf::Event::KeyPressed) {
-                if (event.key.code == sf::Keyboard::Tab) {
+            if (event.type == Event::KeyPressed) {
+                if (event.key.code == Keyboard::Tab) {
                     if (userField.getFocused()) {
                         userField.setFocused(false); passField.setFocused(true);
                     } else if (passField.getFocused()) {

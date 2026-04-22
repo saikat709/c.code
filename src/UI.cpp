@@ -20,7 +20,7 @@ InputField::InputField(const Font& font, const string& placeholder, Vector2f pos
 }
 
 void InputField::handleEvent(const Event& event, const RenderWindow& window) {
-    if (event.type == sf::Event::MouseButtonPressed) {
+    if (event.type == Event::MouseButtonPressed) {
         auto mouse = Mouse::getPosition(window);
         Vector2f mousePos(static_cast<float>(mouse.x), static_cast<float>(mouse.y));
         isFocused = box.getGlobalBounds().contains(mousePos);
@@ -29,7 +29,7 @@ void InputField::handleEvent(const Event& event, const RenderWindow& window) {
     }
 
     if (isFocused) {
-        if (event.type == sf::Event::TextEntered) {
+        if (event.type == Event::TextEntered) {
             if (event.text.unicode == 8) { // Backspace
                 if (!content.empty()) content.pop_back();
             } else if (event.text.unicode < 128 && event.text.unicode >= 32) {
@@ -113,7 +113,7 @@ bool Button::update(const RenderWindow& window) {
 }
 
 bool Button::isClicked(const Event& event, const RenderWindow& window) {
-    if (event.type == sf::Event::MouseButtonPressed) {
+    if (event.type == Event::MouseButtonPressed) {
             auto mouse = Mouse::getPosition(window);
             Vector2f mousePos(static_cast<float>(mouse.x), static_cast<float>(mouse.y));
             if (shape.getGlobalBounds().contains(mousePos)) return true;

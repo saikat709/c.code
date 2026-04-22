@@ -79,9 +79,9 @@ AppState ProjectSelectScreen::run(RenderWindow& window) {
         }
         Vector2i mousePos = Mouse::getPosition(window);
 
-        sf::Event event;
+        Event event;
         while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed)
+            if (event.type == Event::Closed)
                 return AppState::EXIT;
 
             if (showFriendPopup) {
@@ -143,8 +143,8 @@ AppState ProjectSelectScreen::run(RenderWindow& window) {
                     return AppState::LOGIN;
                 }
 
-                if (event.type == sf::Event::MouseButtonPressed) {
-                    if (event.mouseButton.button == sf::Mouse::Button::Left) {
+                if (event.type == Event::MouseButtonPressed) {
+                    if (event.mouseButton.button == Mouse::Button::Left) {
                         for (const auto& proj : projects) {
                             if (proj.bounds.contains({(float)mousePos.x, (float)mousePos.y})) {
                                 Session::getInstance().setCurrentProjectId(proj.id);

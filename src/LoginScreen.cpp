@@ -41,8 +41,8 @@ AppState LoginScreen::run(RenderWindow& window) {
             
             userField.handleEvent(event, window);
             passField.handleEvent(event, window);
-            if (event.type == sf::Event::KeyPressed) {
-                if (event.key.code == sf::Keyboard::Tab) {
+            if (event.type == Event::KeyPressed) {
+                if (event.key.code == Keyboard::Tab) {
                     bool uFocus = userField.getFocused();
                     userField.setFocused(!uFocus);
                     passField.setFocused(uFocus);

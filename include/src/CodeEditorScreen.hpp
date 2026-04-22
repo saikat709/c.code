@@ -44,7 +44,7 @@ class CodeEditorScreen {
     int preferredColumn = 0;  // For up/down navigation
     
     // Resizable panels state
-    float sidebarWidth = 200.0f;
+    float sidebarWidth = 250.0f;
     float chatWidth = 160.0f;
     float outputHeight = 280.0f;
     

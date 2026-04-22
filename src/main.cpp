@@ -18,30 +18,30 @@ using namespace sf;
 float HEIGHT = 600;
 float WIDTH  = 800;
 
+using namespace std;
+
 int main() {
     RenderWindow window(VideoMode({(unsigned int)WIDTH, (unsigned int)HEIGHT}), "C.CODE", Style::Titlebar | Style::Close | Style::Resize);
     window.setFramerateLimit(60);
 
-    sf::Font font;
-    // Try common Linux fonts
+    Font font;
+    
     if (!font.loadFromFile("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")) {
         if (!font.loadFromFile("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf")) {
-            std::cerr << "Failed to load font" << std::endl;
+            cerr << "Failed to load font" << endl;
             return 1;
         }
     }
 
-    // Network Client
     NetworkClient networkClient;
     if (!networkClient.connectToServer("127.0.0.1", 8081)) {
         cerr << "Failed to connect to server." << endl;
     }
+    
     Session::getInstance().setNetworkClient(&networkClient);
 
-    // Shared
     ParticleSystem particles(50, {(unsigned int)WIDTH, (unsigned int)HEIGHT});
     
-    // Screens
     LoginScreen loginScreen(font, particles, {(unsigned int)WIDTH, (unsigned int)HEIGHT}, networkClient);
     RegisterScreen registerScreen(font, particles, {(unsigned int)WIDTH, (unsigned int)HEIGHT}, networkClient);
     CodeEditorScreen codeEditorScreen(font, particles, {(unsigned int)WIDTH, (unsigned int)HEIGHT});
@@ -53,7 +53,6 @@ int main() {
         currentState = static_cast<AppState>(lastStateInt);
     }
 
-    // Background gradient (shared)
     VertexArray gradient(PrimitiveType::TriangleStrip, 4);
     gradient[0].position = {0, 0};     gradient[0].color = Color(15, 23, 42);
     gradient[1].position = {0, HEIGHT};   gradient[1].color = Color(30, 41, 59);
