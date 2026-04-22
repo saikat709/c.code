@@ -3,6 +3,7 @@
 #include "NetworkClient.hpp"
 #include "json.hpp"
 #include "huffman.hpp"
+#include "net_utils.hpp"
 
 using namespace std;
 
@@ -52,11 +53,10 @@ bool NetworkClient::connectToServer(const string& ip, int port) {
 
 void NetworkClient::listenForBroadcasts() {
     Huffman huffman;
-    char buffer[4096];
 
     while (!stopListener && isConnected) {
-        int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
-        if (bytesReceived <= 0) {
+        string rawMsg;
+        if (!recvFramed(clientSocket, rawMsg)) {
             if (!stopListener) {
                 isConnected = false;
                 responseCv.notify_all();
@@ -64,10 +64,8 @@ void NetworkClient::listenForBroadcasts() {
             break;
         }
 
-        buffer[bytesReceived] = '\0';
         try {
-            string responseStr(buffer);
-            string decompressedResponse = huffman.decompress(responseStr);
+            string decompressedResponse = huffman.decompress(rawMsg);
             json payload = json::parse(decompressedResponse);
 
             if (payload.contains("status")) {
@@ -99,7 +97,7 @@ json NetworkClient::sendRequest(const json& request) {
 
     Huffman huffman;
     string requestStr = huffman.compress(request.dump());
-    if (send(clientSocket, requestStr.c_str(), requestStr.size(), 0) == -1) {
+    if (!sendFramed(clientSocket, requestStr)) {
         cerr << "Send failed" << endl;
         return {
             {"status", "error"},
@@ -108,9 +106,16 @@ json NetworkClient::sendRequest(const json& request) {
     }
 
     unique_lock<mutex> lock(responseMutex);
-    responseCv.wait(lock, [this]() {
+    bool gotResponse = responseCv.wait_for(lock, chrono::seconds(8), [this]() {
         return !pendingResponses.empty() || !isConnected || stopListener;
     });
+
+    if (!gotResponse) {
+        return {
+            {"status", "error"},
+            {"message", "Request timed out"}
+        };
+    }
 
     if (pendingResponses.empty()) {
         return {

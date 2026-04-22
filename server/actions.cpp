@@ -98,7 +98,7 @@ bool DBActions::sendMessage(Database& db, int projectId, const string& sender, c
 }
 
 json DBActions::getMessages(Database& db, int projectId) {
-    string query = "SELECT sender, message, timestamp FROM messages WHERE projectId = " + to_string(projectId) + " ORDER BY timestamp ASC;";
+    string query = "SELECT id, sender, message, timestamp FROM messages WHERE projectId = " + to_string(projectId) + " ORDER BY id ASC;";
     return db.fetchAsJson(query);
 }
 

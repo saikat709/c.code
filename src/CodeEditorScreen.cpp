@@ -22,7 +22,7 @@ CodeEditorScreen::CodeEditorScreen(Font& font, ParticleSystem& particles, Vector
       shareBtn(font, "Share", {450, 5}, {80, 30}),
       backBtn(font, "Back", {535, 5}, {80, 30}),
       logoutBtn(font, "Logout", {700, 5}, {90, 30}),
-      requestAccessBtn(font, "Request Access", {0, 0}, {140, 30}),
+    //   requestAccessBtn(font, "Request Access", {0, 0}, {140, 30}),
       editorLabel("Code Editor", font, 18),
       outputLabel("Output", font, 18),
       codeText("", font, 14),
@@ -333,6 +333,8 @@ void CodeEditorScreen::handleServerBroadcast(const json& broadcast) {
     if (kind == "edit_request") {
         pendingEditRequester = broadcast.value("requester", "Unknown");
         pendingEditFileId = broadcast.value("file_id", -1);
+        pendingEditRequesterId = broadcast.value("requester_id", -1);
+        pendingEditRequesterSocket = broadcast.value("requester_socket", -1);
         showEditRequestDialog = true;
         
         string filename = "Unknown File";
@@ -401,7 +403,17 @@ void CodeEditorScreen::handleServerBroadcast(const json& broadcast) {
     } else if (kind == "new_message") {
         int messageId = broadcast.value("id", 0);
         if (messageId > lastMessageId) lastMessageId = messageId;
-        loadMessages();
+        string sender = broadcast.value("sender", "");
+        string text = broadcast.value("message", "");
+        if (!sender.empty()) {
+            string fullMessage = sender + ": " + text;
+            Text msgText(fullMessage, font, 12);
+            float chatX = 800.0f - chatWidth + 10;
+            float yPos = messageDisplay.empty() ? 80.0f : (messageDisplay.back().getPosition().y + 20.0f);
+            msgText.setPosition({chatX, yPos});
+            msgText.setFillColor(Color(200, 220, 255));
+            messageDisplay.push_back(msgText);
+        }
     }
 }
 
@@ -458,15 +470,12 @@ void CodeEditorScreen::fetchFileContent(int fileId) {
         currentFileIsLocked = response.value("locked", false);
         currentFileLockOwner = response.value("lockedBy", "");
         currentFileIsLockedByMe = currentFileIsLocked && response.value("lockedByUserId", -1) == Session::getInstance().getUserId();
-        if (currentFileIsLocked) {
-            if (currentFileIsLockedByMe) fileLockInfoText.setString("Editing as you");
-            else fileLockInfoText.setString("Locked by " + currentFileLockOwner);
-        } else {
-            fileLockInfoText.setString("");
-        }
-        if (selectedFileIndex >= 0 && selectedFileIndex < static_cast<int>(fileList.size())) {
-            editorLabel.setString("Code Editor - " + fileList[selectedFileIndex]);
-        }
+        // if (currentFileIsLocked) {
+        //     if (currentFileIsLockedByMe) fileLockInfoText.setString("Editing as you");
+        //     else fileLockInfoText.setString("Locked by " + currentFileLockOwner);
+        // } else {
+        //     fileLockInfoText.setString("");
+        // }
         updateCodeDisplay();
     }
 }
@@ -477,6 +486,7 @@ void CodeEditorScreen::saveFile() {
     json request;
     request["action"] = "save_file";
     request["file_id"] = currentFileId;
+    request["user_id"] = Session::getInstance().getUserId();
     request["content"] = code;
     
     // Send background save call
@@ -537,7 +547,17 @@ void CodeEditorScreen::sendMessage() {
     json response = Session::getInstance().getNetworkClient()->sendRequest(request);
     if (response["status"] == "success") {
         chatInputField.setString("");
-        loadMessages();
+        int messageId = response.value("id", 0);
+        if (messageId > lastMessageId) lastMessageId = messageId;
+        string sender = response.value("sender", Session::getInstance().getUsername());
+        string msgBody = response.value("message", text);
+        string fullMessage = sender + ": " + msgBody;
+        Text msgText(fullMessage, font, 12);
+        float chatX = 800.0f - chatWidth + 10;
+        float yPos = messageDisplay.empty() ? 80.0f : (messageDisplay.back().getPosition().y + 20.0f);
+        msgText.setPosition({chatX, yPos});
+        msgText.setFillColor(Color(200, 220, 255));
+        messageDisplay.push_back(msgText);
     }
 }
 
@@ -615,6 +635,12 @@ void CodeEditorScreen::updateLayout() {
     // Update new file button
     newFileBtn.setPosition({10, windowHeight - 45.0f});
     newFileBtn.setSize({sidebarWidth - 20, 35});
+
+    // if (currentFileIsLocked && !currentFileIsLockedByMe) {
+        // fileLockInfoText.setPosition({10, windowHeight - 110.0f});
+        // requestAccessBtn.setPosition({10, windowHeight - 75.0f});
+        // requestAccessBtn.setSize({sidebarWidth - 20, 30});
+    // }
     
     float editorX = sidebarWidth;
     float editorWidth = windowWidth - sidebarWidth - (chatVisible ? chatWidth : 0);
@@ -630,8 +656,6 @@ void CodeEditorScreen::updateLayout() {
         outputHandle.setSize({editorWidth, 5});
         
         editorLabel.setPosition({editorX + 5, topBarHeight + 5});
-        fileLockInfoText.setPosition({editorX + 170, topBarHeight + 8});
-        requestAccessBtn.setPosition({editorX + editorWidth - 155, topBarHeight + 3});
         outputLabel.setPosition({editorX + 5, topBarHeight + editorHeight + 5});
         codeText.setPosition({editorX + 10, topBarHeight + 30});
         outputText.setPosition({editorX + 10, topBarHeight + editorHeight + 30});
@@ -641,8 +665,6 @@ void CodeEditorScreen::updateLayout() {
         outputBox.setSize({editorWidth, 0});
         
         editorLabel.setPosition({editorX + 5, topBarHeight + 5});
-        fileLockInfoText.setPosition({editorX + 170, topBarHeight + 8});
-        requestAccessBtn.setPosition({editorX + editorWidth - 155, topBarHeight + 3});
         codeText.setPosition({editorX + 10, topBarHeight + 30});
     }
     
@@ -734,6 +756,15 @@ void CodeEditorScreen::drawSidebar(RenderWindow& window) {
         window.draw(fileText);
         yPos += lineHeight;
     }
+
+    // if (currentFileIsLocked && !currentFileIsLockedByMe) {
+    //     fileLockInfoText.setPosition({10, windowHeight - 110.0f});
+    //     requestAccessBtn.setPosition({10, windowHeight - 75.0f});
+    //     requestAccessBtn.setSize({sidebarWidth - 20.0f, 30.0f});
+    //     window.draw(fileLockInfoText);
+    //     requestAccessBtn.draw(window);
+    // }
+
     newFileBtn.draw(window);
 }
 
@@ -771,13 +802,13 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
         if (showSharePopup) {
             sf::Event event;
             while (window.pollEvent(event)) {
-                if (event.type == sf::Event::Closed) return AppState::EXIT;
+                if (event.type == Event::Closed) return AppState::EXIT;
                 
-                if (event.type == sf::Event::Resized) {
+                if (event.type == Event::Resized) {
                     windowWidth = static_cast<float>(event.size.width);
                     windowHeight = static_cast<float>(event.size.height);
-                    sf::FloatRect visibleArea(0, 0, windowWidth, windowHeight);
-                    window.setView(sf::View(visibleArea));
+                    FloatRect visibleArea(0, 0, windowWidth, windowHeight);
+                    window.setView(View(visibleArea));
                     updateLayout();
                 }
 
@@ -786,15 +817,15 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
             // Update only popup button
             closeShareBtn.update(window);
         } else if (showEditRequestDialog) {
-            sf::Event event;
+            Event event;
             while (window.pollEvent(event)) {
-                if (event.type == sf::Event::Closed) return AppState::EXIT;
+                if (event.type == Event::Closed) return AppState::EXIT;
                 
-                if (event.type == sf::Event::Resized) {
+                if (event.type == Event::Resized) {
                     windowWidth = static_cast<float>(event.size.width);
                     windowHeight = static_cast<float>(event.size.height);
-                    sf::FloatRect visibleArea(0, 0, windowWidth, windowHeight);
-                    window.setView(sf::View(visibleArea));
+                    FloatRect visibleArea(0, 0, windowWidth, windowHeight);
+                    window.setView(View(visibleArea));
                     updateLayout();
                     
                     float centerX = windowWidth / 2.0f;
@@ -810,8 +841,9 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
                      json res;
                      res["action"] = "respond_edit_request";
                      res["file_id"] = pendingEditFileId;
-                     res["requester"] = pendingEditRequester;
-                     res["granted"] = true;
+                     res["requester_id"] = pendingEditRequesterId;
+                     res["requester_socket"] = pendingEditRequesterSocket;
+                     res["allowed"] = true;
                      Session::getInstance().getNetworkClient()->sendRequest(res);
                      showEditRequestDialog = false;
                 }
@@ -819,8 +851,9 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
                      json res;
                      res["action"] = "respond_edit_request";
                      res["file_id"] = pendingEditFileId;
-                     res["requester"] = pendingEditRequester;
-                     res["granted"] = false;
+                     res["requester_id"] = pendingEditRequesterId;
+                     res["requester_socket"] = pendingEditRequesterSocket;
+                     res["allowed"] = false;
                      Session::getInstance().getNetworkClient()->sendRequest(res);
                      showEditRequestDialog = false;
                 }
@@ -829,16 +862,16 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
             denyEditBtn.update(window);
         } else {
             pollForUpdates();
-            sf::Event event;
+            Event event;
             while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed)
+            if (event.type == Event::Closed)
                 return AppState::EXIT;
             
-            if (event.type == sf::Event::Resized) {
+            if (event.type == Event::Resized) {
                 windowWidth = static_cast<float>(event.size.width);
                 windowHeight = static_cast<float>(event.size.height);
-                sf::FloatRect visibleArea(0, 0, windowWidth, windowHeight);
-                window.setView(sf::View(visibleArea));
+                FloatRect visibleArea(0, 0, windowWidth, windowHeight);
+                window.setView(View(visibleArea));
                 updateLayout();
             }
             
@@ -858,10 +891,10 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
                 chatVisible = !chatVisible;
                 updateLayout();
             }
-            if (currentFileIsLocked && !currentFileIsLockedByMe && requestAccessBtn.isClicked(event, window)) {
-                requestFileEdit(currentFileId);
-                updateLayout();
-            }
+            // if (currentFileIsLocked && !currentFileIsLockedByMe && requestAccessBtn.isClicked(event, window)) {
+            //     requestFileEdit(currentFileId);
+            //     updateLayout();
+            // }
             if (shareBtn.isClicked(event, window)) {
                 json req;
                 req["action"] = "get_project_info";
@@ -888,8 +921,8 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
                 return AppState::LOGIN;
             }
             
-            if (event.type == sf::Event::MouseButtonPressed) {
-                if (event.mouseButton.button == sf::Mouse::Button::Left) {
+            if (event.type == Event::MouseButtonPressed) {
+                if (event.mouseButton.button == Mouse::Button::Left) {
                     Vector2f mousePos = window.mapPixelToCoords({event.mouseButton.x, event.mouseButton.y});
                     
                     if (sidebarHandle.getGlobalBounds().contains(mousePos)) {
@@ -910,7 +943,7 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
                 }
             }
 
-            if (event.type == sf::Event::MouseMoved) {
+            if (event.type == Event::MouseMoved) {
                 Vector2f mousePos = window.mapPixelToCoords({event.mouseMove.x, event.mouseMove.y});
                 if (isResizingSidebar) {
                     sidebarWidth = max(100.0f, min(400.0f, mousePos.x));
@@ -921,7 +954,7 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
                 } else if (isResizingOutput) {
                     outputHeight = max(50.0f, min(500.0f, windowHeight - mousePos.y));
                     updateLayout();
-                } else if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && isSelecting) {
+                } else if (Mouse::isButtonPressed(Mouse::Button::Left) && isSelecting) {
                     size_t newPos = getCursorPosFromClick(mousePos);
                     if (newPos != cursorPos) {
                         selectionEnd = newPos;
@@ -931,8 +964,8 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
                 }
             }
 
-            if (event.type == sf::Event::MouseButtonReleased) {
-                if (event.mouseButton.button == sf::Mouse::Button::Left) {
+            if (event.type == Event::MouseButtonReleased) {
+                if (event.mouseButton.button == Mouse::Button::Left) {
                     isSelecting = false;
                     isResizingSidebar = false;
                     isResizingChat = false;
@@ -940,7 +973,7 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
                 }
             }
 
-            if (event.type == sf::Event::TextEntered) {
+            if (event.type == Event::TextEntered) {
                 if (event.text.unicode < 128) {
                     char c = static_cast<char>(event.text.unicode);
                     if (isNamingFile) {
@@ -979,39 +1012,39 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
                 }
             }
 
-            if (event.type == sf::Event::KeyPressed) {
-                bool shiftPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) || sf::Keyboard::isKeyPressed(sf::Keyboard::RShift);
-                bool ctrlPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::RControl);
+            if (event.type == Event::KeyPressed) {
+                bool shiftPressed = Keyboard::isKeyPressed(Keyboard::LShift) || Keyboard::isKeyPressed(Keyboard::RShift);
+                bool ctrlPressed = Keyboard::isKeyPressed(Keyboard::LControl) || Keyboard::isKeyPressed(Keyboard::RControl);
 
                 if (currentFileIsLocked && !currentFileIsLockedByMe) {
                     continue;
                 }
                 
                 if (ctrlPressed) {
-                    if (event.key.code == sf::Keyboard::C && hasSelection()) Clipboard::setString(getSelectedText());
-                    else if (event.key.code == sf::Keyboard::V) {
+                    if (event.key.code == Keyboard::C && hasSelection()) Clipboard::setString(getSelectedText());
+                    else if (event.key.code == Keyboard::V) {
                         if (hasSelection()) deleteSelection();
                         string clip = Clipboard::getString();
                         code.insert(cursorPos, clip); cursorPos += clip.length(); clearSelection();
                         updateCodeDisplay(); needsSave = true; lastEditClock.restart();
-                    } else if (event.key.code == sf::Keyboard::X && hasSelection()) {
+                    } else if (event.key.code == Keyboard::X && hasSelection()) {
                         Clipboard::setString(getSelectedText()); deleteSelection();
                         updateCodeDisplay(); needsSave = true; lastEditClock.restart();
-                    } else if (event.key.code == sf::Keyboard::A) {
+                    } else if (event.key.code == Keyboard::A) {
                         selectionStart = 0; selectionEnd = code.length(); cursorPos = code.length();
                         updateCodeDisplay();
                     }
                 }
                 
-                if (event.key.code == sf::Keyboard::Left && cursorPos > 0) {
+                if (event.key.code == Keyboard::Left && cursorPos > 0) {
                     if (shiftPressed) { if (!hasSelection()) selectionStart = cursorPos; cursorPos--; selectionEnd = cursorPos; }
                     else { cursorPos--; clearSelection(); }
                     preferredColumn = 0; updateCodeDisplay();
-                } else if (event.key.code == sf::Keyboard::Right && cursorPos < code.length()) {
+                } else if (event.key.code == Keyboard::Right && cursorPos < code.length()) {
                     if (shiftPressed) { if (!hasSelection()) selectionStart = cursorPos; cursorPos++; selectionEnd = cursorPos; }
                     else { cursorPos++; clearSelection(); }
                     preferredColumn = 0; updateCodeDisplay();
-                } else if (event.key.code == sf::Keyboard::Up) {
+                } else if (event.key.code == Keyboard::Up) {
                     if (shiftPressed) { if (!hasSelection()) selectionStart = cursorPos; moveCursorUp(); selectionEnd = cursorPos; }
                     else { moveCursorUp(); clearSelection(); }
                     updateCodeDisplay();
@@ -1052,19 +1085,13 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
         if (chatVisible) {
             sendChatBtn.update(window);
         }
-        if (currentFileIsLocked && !currentFileIsLockedByMe) {
-            requestAccessBtn.update(window);
-        }
+        // if (currentFileIsLocked && !currentFileIsLockedByMe) {
+        //     requestAccessBtn.update(window);
+        // }
     } // This closes the 'else' block which corresponds to (!showSharePopup)
         
     if (showSharePopup) {
         closeShareBtn.update(window);
-        if (!fileLockInfoText.getString().isEmpty()) {
-            window.draw(fileLockInfoText);
-        }
-        if (currentFileIsLocked && !currentFileIsLockedByMe) {
-            requestAccessBtn.draw(window);
-        }
     }
     particles.update();
 
@@ -1123,6 +1150,13 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
             window.draw(sharePopupTitle);
             window.draw(sharePopupInfo);
             closeShareBtn.draw(window);
+        } else if (showEditRequestDialog) {
+            window.draw(popupOverlay);
+            window.draw(editRequestCard);
+            window.draw(editRequestTitle);
+            window.draw(editRequestMessage);
+            allowEditBtn.draw(window);
+            denyEditBtn.draw(window);
         }
 
         window.display();

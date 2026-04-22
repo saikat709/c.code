@@ -5,6 +5,7 @@
 #include <iostream>
 #include "huffman.hpp"
 #include "actions.hpp"
+#include "net_utils.hpp"
 using namespace std;
 
 Server::Server(Database* database) : serverSocket(-1), isRunning(false), db(database) { }
@@ -71,7 +72,7 @@ void Server::sendToClient(int socketFd, const json& response) {
     Huffman huffman;
     string responseStr = response.dump();
     string compressedResponse = huffman.compress(responseStr);
-    send(socketFd, compressedResponse.c_str(), compressedResponse.length(), 0);
+    sendFramed(socketFd, compressedResponse);
 }
 
 void Server::broadcastToProject(int projectId, const json& message, int excludeSocket) {
@@ -84,14 +85,13 @@ void Server::broadcastToProject(int projectId, const json& message, int excludeS
 }
 
 void Server::handleClient(int clientSocket) {
-    char buffer[4096];
     int currentUserId = 0;
     int currentProjectId = 0;
     string currentUsername;
 
     while (true) {
-        int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
-        if (bytesReceived <= 0) {
+        string receivedData;
+        if (!recvFramed(clientSocket, receivedData)) {
             cout << "Client disconnected" << endl;
             
             // Clean up: remove from connected clients and unlock any files
@@ -116,10 +116,6 @@ void Server::handleClient(int clientSocket) {
             close(clientSocket);
             break;
         }
-
-        buffer[bytesReceived] = '\0';
-        string receivedData(buffer);
-        cout << "Length: " << receivedData.size() << endl;
         Huffman huffman;
 
         try {
@@ -370,6 +366,9 @@ void Server::handleClient(int clientSocket) {
                     // Get the new message ID
                     json messages = DBActions::getMessages(*db, projectId);
                     int newMessageId = messages.empty() ? 0 : messages.back()["id"].get<int>();
+                    response["id"] = newMessageId;
+                    response["sender"] = sender;
+                    response["message"] = message;
 
                     
                     // Broadcast new message to all project members
@@ -412,14 +411,17 @@ void Server::handleClient(int clientSocket) {
 
             string responseStr = response.dump();
             string compressedResponse = huffman.compress(responseStr);
-            send(clientSocket, compressedResponse.c_str(), compressedResponse.length(), 0);
+            sendFramed(clientSocket, compressedResponse);
         } catch (const json::parse_error& e) {
             cerr << "JSON Parse Error: " << e.what() << endl;
             string errorMsg = "{\"status\":\"error\",\"message\":\"Invalid JSON\"}";
             string compressedErrorMsg = huffman.compress(errorMsg);
-            send(clientSocket, compressedErrorMsg.c_str(), compressedErrorMsg.length(), 0);
+            sendFramed(clientSocket, compressedErrorMsg);
         } catch (const exception& e) {
             cerr << "Error: " << e.what() << endl;
+            string errorMsg = "{\"status\":\"error\",\"message\":\"Server exception\"}";
+            string compressedErrorMsg = huffman.compress(errorMsg);
+            sendFramed(clientSocket, compressedErrorMsg);
         }
     }
 }
