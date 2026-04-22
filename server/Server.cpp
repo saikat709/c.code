@@ -75,6 +75,16 @@ void Server::sendToClient(int socketFd, const json& response) {
     sendFramed(socketFd, compressedResponse);
 }
 
+void Server::broadcastToAll(const json& message, int excludeSocket) {
+    lock_guard<mutex> lock(clientsMutex);
+    for (const auto& [socketFd, clientInfo] : connectedClients) {
+        (void)clientInfo;
+        if (socketFd != excludeSocket) {
+            sendToClient(socketFd, message);
+        }
+    }
+}
+
 void Server::broadcastToProject(int projectId, const json& message, int excludeSocket) {
     lock_guard<mutex> lock(clientsMutex);
     for (const auto& [socketFd, clientInfo] : connectedClients) {
@@ -93,26 +103,10 @@ void Server::handleClient(int clientSocket) {
         string receivedData;
         if (!recvFramed(clientSocket, receivedData)) {
             cout << "Client disconnected" << endl;
-            
-            // Clean up: remove from connected clients and unlock any files
             {
                 lock_guard<mutex> lock(clientsMutex);
                 connectedClients.erase(clientSocket);
             }
-            
-            // Release any file locks held by this client
-            {
-                lock_guard<mutex> lock(fileLocksMutex);
-                for (auto it = fileLocks.begin(); it != fileLocks.end(); ) {
-                    if (it->second.socketFd == clientSocket) {
-                        DBActions::unlockFile(*db, it->first, it->second.userId);
-                        it = fileLocks.erase(it);
-                    } else {
-                        ++it;
-                    }
-                }
-            }
-            
             close(clientSocket);
             break;
         }
@@ -134,6 +128,10 @@ void Server::handleClient(int clientSocket) {
                     response["username"] = user.getUsername();
                     currentUserId = user.getId();
                     currentUsername = user.getUsername();
+                    {
+                        lock_guard<mutex> lock(clientsMutex);
+                        connectedClients[clientSocket] = {currentUserId, currentProjectId, currentUsername};
+                    }
                 } else {
                     response["status"] = "error";
                     response["message"] = "Invalid credentials";
@@ -169,23 +167,8 @@ void Server::handleClient(int clientSocket) {
                 response["status"] = "success";
             } else if (action == "get_files") {
                 int projectId = request["project_id"];
-                json files = DBActions::getFiles(*db, projectId);
-                
-                // Add lock information to each file
-                for (auto& file : files) {
-                    int fileId = file["id"];
-                    if (DBActions::isFileLocked(*db, fileId)) {
-                        json lockInfo = DBActions::getFileLockInfo(*db, fileId);
-                        file["locked"] = true;
-                        file["lockedBy"] = lockInfo["username"];
-                        file["lockedByUserId"] = lockInfo["userId"];
-                    } else {
-                        file["locked"] = false;
-                    }
-                }
-                
                 response["status"] = "success";
-                response["files"] = files;
+                response["files"] = DBActions::getFiles(*db, projectId);
             } else if (action == "create_file") {
                 string name = request["name"];
                 int projectId = request["project_id"];
@@ -197,10 +180,11 @@ void Server::handleClient(int clientSocket) {
                     // Broadcast new file to all project members
                     json broadcast;
                     broadcast["type"] = "file_created";
+                    broadcast["project_id"] = projectId;
                     broadcast["file_id"] = fileId;
                     broadcast["file_name"] = name;
                     broadcast["creator"] = currentUsername;
-                    broadcastToProject(projectId, broadcast, clientSocket);
+                    broadcastToAll(broadcast, clientSocket);
                 } else {
                     response["status"] = "error";
                 }
@@ -212,6 +196,7 @@ void Server::handleClient(int clientSocket) {
                 int fileId = request["file_id"];
                 string content = request["content"];
                 int userId = request["user_id"];
+                int projectId = request.value("project_id", currentProjectId);
                 
                 if (DBActions::updateFileContent(*db, fileId, content)) {
                     response["status"] = "success";
@@ -219,9 +204,11 @@ void Server::handleClient(int clientSocket) {
                     // Broadcast file update to project members
                     json broadcast;
                     broadcast["type"] = "file_updated";
+                    broadcast["project_id"] = projectId;
                     broadcast["file_id"] = fileId;
+                    broadcast["content"] = content;
                     broadcast["updated_by"] = currentUsername;
-                    broadcastToProject(currentProjectId, broadcast, clientSocket);
+                    broadcastToAll(broadcast, clientSocket);
                 } else {
                     response["status"] = "error";
                 }
@@ -243,10 +230,11 @@ void Server::handleClient(int clientSocket) {
                     // Broadcast new message to all project members
                     json broadcast;
                     broadcast["type"] = "new_message";
+                    broadcast["project_id"] = projectId;
                     broadcast["id"] = newMessageId;
                     broadcast["sender"] = sender;
                     broadcast["message"] = message;
-                    broadcastToProject(projectId, broadcast, clientSocket);
+                    broadcastToAll(broadcast, clientSocket);
                 } else {
                     response["status"] = "error";
                 }

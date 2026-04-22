@@ -12,6 +12,8 @@
 #include <string>
 #include "json.hpp"
 
+using namespace std;
+
 
 class Server {
     int serverSocket;
@@ -19,33 +21,15 @@ class Server {
     bool isRunning;
     class Database* db;
 
-    // Track connected clients: socket -> {userId, projectId, username}
     struct ClientInfo {
         int userId = 0;
         int projectId = 0;
-        std::string username;
+        string username;
     };
-    std::map<int, ClientInfo> connectedClients;
-    std::mutex clientsMutex;
+    map<int, ClientInfo> connectedClients;
+    mutex clientsMutex;
 
-    // File lock tracking: fileId -> {lockedByUserId, lockedByUsername}
-    struct FileLock {
-        int userId;
-        std::string username;
-        int socketFd;
-    };
-    std::map<int, FileLock> fileLocks;
-    std::mutex fileLocksMutex;
-
-    // Pending edit requests: fileId -> list of {requestingUserId, requestingSocket}
-    struct EditRequest {
-        int requestingUserId;
-        std::string requestingUsername;
-        int requestingSocket;
-    };
-    std::map<int, std::vector<EditRequest>> pendingEditRequests;
-    std::mutex editRequestsMutex;
-
+    void broadcastToAll(const json& message, int excludeSocket = -1);
     void broadcastToProject(int projectId, const json& message, int excludeSocket = -1);
     void sendToClient(int socketFd, const json& response);
 

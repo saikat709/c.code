@@ -55,13 +55,7 @@ int DBActions::createFile(Database& db, const string& fileName, int projectId) {
 }
 
 json DBActions::getFiles(Database& db, int projectId) {
-    string query = "SELECT f.id, f.name, "
-                   "CASE WHEN l.fileId IS NULL THEN 0 ELSE 1 END AS locked, "
-                   "COALESCE(l.username, '') AS lockedBy, "
-                   "COALESCE(l.userId, -1) AS lockedByUserId "
-                   "FROM files f "
-                   "LEFT JOIN file_locks l ON f.id = l.fileId "
-                   "WHERE f.projectId = " + to_string(projectId) + ";";
+    string query = "SELECT id, name FROM files WHERE projectId = " + to_string(projectId) + ";";
     return db.fetchAsJson(query);
 }
 
@@ -123,57 +117,6 @@ json DBActions::getProjectAccessInfo(Database& db, int projectId) {
     json result = db.fetchAsJson(query);
     if (!result.empty()) return result[0];
     return json::object();
-}
-
-bool DBActions::lockFile(Database& db, int fileId, int userId) {
-    // First check if file is already locked
-    if (isFileLocked(db, fileId)) {
-        return false;
-    }
-    
-    // Get username
-    string userQuery = "SELECT username FROM users WHERE id = " + to_string(userId) + ";";
-    json userResult = db.fetchAsJson(userQuery);
-    if (userResult.empty()) return false;
-    
-    string username = userResult[0]["username"];
-    string escapedUsername = username;
-    size_t pos = 0;
-    while ((pos = escapedUsername.find("'", pos)) != string::npos) {
-        escapedUsername.replace(pos, 1, "''");
-        pos += 2;
-    }
-    
-    string query = "INSERT INTO file_locks (fileId, userId, username) VALUES (" 
-                   + to_string(fileId) + ", " + to_string(userId) + ", '" + escapedUsername + "');";
-    return db.executeQuery(query);
-}
-
-bool DBActions::unlockFile(Database& db, int fileId, int userId) {
-    // Only the user who locked it can unlock it
-    string query = "DELETE FROM file_locks WHERE fileId = " + to_string(fileId) 
-                   + " AND userId = " + to_string(userId) + ";";
-    return db.executeQuery(query);
-}
-
-json DBActions::getFileLockInfo(Database& db, int fileId) {
-    string query = "SELECT userId, username, lockedAt FROM file_locks WHERE fileId = " + to_string(fileId) + ";";
-    json result = db.fetchAsJson(query);
-    if (!result.empty()) return result[0];
-    return json::object();
-}
-
-bool DBActions::isFileLocked(Database& db, int fileId) {
-    string query = "SELECT COUNT(*) as count FROM file_locks WHERE fileId = " + to_string(fileId) + ";";
-    json result = db.fetchAsJson(query);
-    return !result.empty() && result[0]["count"] > 0;
-}
-
-int DBActions::getFileLockOwner(Database& db, int fileId) {
-    string query = "SELECT userId FROM file_locks WHERE fileId = " + to_string(fileId) + ";";
-    json result = db.fetchAsJson(query);
-    if (!result.empty()) return result[0]["userId"];
-    return -1;
 }
 
 json DBActions::getMessagesSince(Database& db, int projectId, int lastMessageId) {

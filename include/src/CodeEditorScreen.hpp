@@ -115,34 +115,11 @@ class CodeEditorScreen {
     int currentFileId = -1;
     void saveFile();
     
-    // File locking
-    bool currentFileIsLocked = false;
-    bool currentFileIsLockedByMe = false;
-    string currentFileLockOwner;
-    Text fileLockInfoText;
-    Button requestAccessBtn;
-    vector<bool> fileLockedStatus;
-    vector<string> fileLockedBy;
-    void requestFileEdit(int fileId);
-    void releaseFileLock();
-    
     // Real-time updates
     Clock pollClock;
     int lastMessageId = 0;
     void pollForUpdates();
     void handleServerBroadcast(const json& broadcast);
-    
-    // Edit request dialog
-    bool showEditRequestDialog = false;
-    RectangleShape editRequestCard;
-    Text editRequestTitle;
-    Text editRequestMessage;
-    Button allowEditBtn;
-    Button denyEditBtn;
-    int pendingEditFileId = -1;
-    int pendingEditRequesterId = -1;
-    int pendingEditRequesterSocket = -1;
-    string pendingEditRequester;
 
     
     // Helper methods

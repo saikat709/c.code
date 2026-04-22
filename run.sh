@@ -1,6 +1,9 @@
 #!/bin/bash
 
-# Create build directory if it doesn't exist
+if [ -f bin/client ]; then
+    mv bin/client bin/client_old
+fi
+
 mkdir -p bin
 
 # Compilation settings
@@ -10,7 +13,7 @@ INCLUDES="-Iinclude -Iinclude/src -Ilib"
 LIBS="-lsfml-graphics -lsfml-window -lsfml-system"
 
 # Output file
-OUTPUT="bin/c.code"
+OUTPUT="bin/client"
 
 # Source files
 SOURCES="src/* lib/*"
