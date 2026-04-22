@@ -2,14 +2,20 @@
 #include "NetworkClient.hpp"
 #include "json.hpp"
 #include "huffman.hpp"
+#include <thread>
+#include <atomic>
 
 using namespace std;
 
 NetworkClient::NetworkClient() : clientSocket(-1), isConnected(false) {
     printf("NetworkClient initialized\n");
+    listenerThread = nullptr;
 }
 
 NetworkClient::~NetworkClient() {
+    stopListener = true;
+    if (listenerThread && listenerThread->joinable()) listenerThread->join();
+    delete listenerThread;
     if (clientSocket != -1) close(clientSocket);
 }
 
@@ -38,7 +44,32 @@ bool NetworkClient::connectToServer(const string& ip, int port) {
 
     isConnected = true;
     cout << "Connected to server at " << ip << ":" << port << endl;
+    stopListener = false;
+    if (!listenerThread) listenerThread = new std::thread(&NetworkClient::listenForBroadcasts, this);
     return true;
+
+}
+
+void NetworkClient::listenForBroadcasts() {
+    Huffman huffman;
+    char buffer[4096];
+    while (!stopListener && isConnected) {
+        int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), MSG_DONTWAIT);
+        if (bytesReceived > 0) {
+            buffer[bytesReceived] = '\0';
+            try {
+                string responseStr(buffer);
+                string decompressedResponse = huffman.decompress(responseStr);
+                json response = json::parse(decompressedResponse);
+                // If it's a broadcast (has 'type' or 'action' and not a direct response)
+                if ((response.contains("type") || response.contains("action")) && !response.contains("status")) {
+                    pendingNotifications.push_back(response);
+                }
+            } catch (...) {}
+        } else {
+            std::this_thread::sleep_for(std::chrono::milliseconds(30));
+        }
+    }
 }
 
 json NetworkClient::sendRequest(const json& request) {

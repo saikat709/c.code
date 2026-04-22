@@ -24,4 +24,7 @@ private:
     int clientSocket;
     bool isConnected;
     std::vector<json> pendingNotifications;
+    std::thread* listenerThread = nullptr;
+    bool stopListener = false;
+    void listenForBroadcasts();
 };

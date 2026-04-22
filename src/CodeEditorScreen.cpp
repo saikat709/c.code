@@ -150,14 +150,9 @@ CodeEditorScreen::CodeEditorScreen(Font& font, ParticleSystem& particles, Vector
     cursor.setSize({2, 16});
     cursor.setFillColor(Color::White);
     
-    // Initialize file list with sample files
-    fileList.push_back("main.cpp");
-    fileList.push_back("temp.cpp");
-    fileList.push_back("utils.cpp");
-    
-    // Default code template
-    code = "#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << \"Hello, World!\" << endl;\n    return 0;\n}\n";
-    cursorPos = code.length();
+    // Do not initialize with sample files or default code. Actual files will be loaded from server.
+    code = "";
+    cursorPos = 0;
     
     float availableHeight = windowSize.y - 40.0f;
     // Resize Handles
@@ -518,6 +513,7 @@ void CodeEditorScreen::createNewFile(const string& name) {
                 break;
             }
         }
+        updateLayout();
     }
 }
 
@@ -690,10 +686,21 @@ AppState CodeEditorScreen::run(RenderWindow& window) {
         fetchFileContent(fileIds[0]);
     }
 
+    bool filesLoaded = false;
     while (window.isOpen()) {
+        if (!filesLoaded) {
+            loadFiles();
+            filesLoaded = true;
+        }
         // Debounce Save Check
         if (needsSave && lastEditClock.getElapsedTime().asSeconds() > 1.0f) {
             saveFile();
+        }
+
+        // Process any asynchronous notifications every frame for real-time updates
+        auto notifications = Session::getInstance().getNetworkClient()->getPendingNotifications();
+        for (const auto& notif : notifications) {
+            handleServerBroadcast(notif);
         }
 
         if (showSharePopup) {
